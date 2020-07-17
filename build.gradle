@@ -1,0 +1,51 @@
+buildscript {
+    ext {
+        springBootVersion = '2.1.9.RELEASE'
+    }
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+
+group 'com.sktelecom.ston'
+version '0.5.2'
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+
+    compile('org.springframework.boot:spring-boot-starter-web')
+    testCompile('org.springframework.boot:spring-boot-starter-test')
+
+    compile('org.projectlombok:lombok')
+
+    implementation 'net.java.dev.jna:jna:4.5.0'
+    implementation 'com.jayway.jsonpath:json-path:2.4.0'
+    implementation 'com.google.code.gson:gson:2.8.6'
+    implementation 'commons-cli:commons-cli:1.4'
+
+    // for WebClient
+    compile ('org.springframework.boot:spring-boot-starter-webflux')
+    compile 'org.projectreactor:reactor-spring:1.0.1.RELEASE'
+}
+
+task faber(type:JavaExec) {
+    group 'application'
+    classpath sourceSets.main.runtimeClasspath
+    main = 'com.sktelecom.ston.controller.faber.Application'
+    args(['--spring.config.location=classpath:/application-faber.properties'])
+}
