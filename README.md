@@ -3,7 +3,16 @@
 ### This repository is currently in development.
 
 ### Steps to run
-- Run Controller
+- Run Cloud Agents (Faber and Alice)
 ```
-./gradlew bootRun
+cd docker
+docker-compose up
+```
+- Run Faber Controller
+```
+./gradlew faber
+```
+- Run Alice Controller (Run with the faber running)
+```
+./gradlew alice
 ```

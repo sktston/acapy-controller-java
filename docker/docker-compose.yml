@@ -1,0 +1,80 @@
+version: '3'
+
+services:
+  acapy-faber-agent:
+    build:
+      context: https://github.com/sktston/aries-cloudagent-python.git
+      dockerfile: ./docker/Dockerfile.run
+    ports:
+      - 8020-8021:8020-8021
+    networks:
+      - acapy
+    command: >
+      start
+        --admin 0.0.0.0 8021
+        --admin-insecure-mode
+        --webhook-url http://localhost:8022/webhooks
+        --endpoint http://localhost:8020
+        --storage-type indy
+        --genesis-url http://54.180.86.51/genesis
+        --inbound-transport http 0.0.0.0 8020
+        --outbound-transport http
+        --label faber.agent
+        --seed 000000000000000000000000Steward1
+        --wallet-type indy
+        --wallet-name faber.agent
+        --wallet-key faber.agent.key
+        --auto-accept-invites
+        --auto-accept-requests
+        --auto-ping-connection
+        --auto-respond-credential-request
+        --auto-store-credential
+        --auto-verify-presentation
+        --auto-respond-messages
+        --preserve-exchange-records
+        --log-level info
+        --trace
+        --trace-target log
+        --trace-tag acapy.events
+        --trace-label faber.agent.trace
+
+  acapy-alice-agent:
+    build:
+      context: https://github.com/sktston/aries-cloudagent-python.git
+      dockerfile: ./docker/Dockerfile.run
+    ports:
+      - 8030-8031:8030-8031
+    networks:
+      - acapy
+    command: >
+      start
+        --admin 0.0.0.0 8031
+        --admin-insecure-mode
+        --webhook-url http://localhost:8032/webhooks
+        --endpoint http://localhost:8030
+        --storage-type indy
+        --genesis-url http://54.180.86.51/genesis
+        --inbound-transport http 0.0.0.0 8030
+        --outbound-transport http
+        --label alice.agent
+        --seed 000000000000000000000000000User1
+        --wallet-local-did
+        --wallet-type indy
+        --wallet-name alice.agent
+        --wallet-key alice.agent.key
+        --auto-accept-invites
+        --auto-accept-requests
+        --auto-ping-connection
+        --auto-respond-credential-request
+        --auto-store-credential
+        --auto-verify-presentation
+        --auto-respond-messages
+        --preserve-exchange-records
+        --log-level info
+        --trace
+        --trace-target log
+        --trace-tag acapy.events
+        --trace-label alice.agent.trace
+
+networks:
+  acapy:

@@ -6,14 +6,13 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 
 @Service
 @Slf4j
 public class GlobalService {
 
     @PostConstruct
-    public void initialize(){
+    public void initialize() throws Exception {
         log.info("initialize >>> start");
 
         log.info("initialize <<< done");
@@ -24,13 +23,6 @@ public class GlobalService {
         log.info("initializeAfterStartup >>> start");
 
         log.info("initializeAfterStartup <<< done");
-    }
-
-    @PreDestroy
-    public void destroy(){
-        log.info("destroy >>> start");
-
-        log.info("destroy <<< done");
     }
 
 }
