@@ -9,7 +9,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class Application {
 
     public static void main(String[] args) {
+        // GlobalService.initialize() is automatically called before this application starts.
         SpringApplication.run(Application.class, args);
-        // GlobalService.initializeAfterStartup() is automatically called after this application starts.
     }
 }
