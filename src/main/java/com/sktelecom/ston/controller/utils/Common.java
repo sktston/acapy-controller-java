@@ -28,6 +28,15 @@ public class Common {
         return r.nextInt((max - min) + 1) + min;
     }
 
+    public static String requestGET(String adminUrl, String uri, int timeoutSec) {
+        return WebClient.create(adminUrl).get()
+                .uri(uri)
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block(Duration.ofSeconds(timeoutSec));
+    }
+
     public static String requestPOST(String adminUrl, String uri, String body, int timeoutSec) {
         return WebClient.create(adminUrl).post()
                 .uri(uri)

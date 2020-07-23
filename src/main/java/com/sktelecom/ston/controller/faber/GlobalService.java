@@ -15,7 +15,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import javax.annotation.PostConstruct;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 
 import static com.sktelecom.ston.controller.utils.Common.*;
 
@@ -27,21 +29,34 @@ public class GlobalService {
     final String tailsServerUrl = "http://13.124.169.12";
     final String vonNetworkUrl = "http://54.180.86.51";
 
-    String invitation;
+    String version; // version for schemaId and credDefId
     String schemaId; // schema identifier
     String credDefId; // credential definition identifier
     String revRegId; // revocation registry identifier
-    String version; // version for schemaId and credDefId
 
     @PostConstruct
     public void initialize() throws Exception {
         log.info("initialize >>> start");
 
-        version = getRandomInt(1, 99) + "." + getRandomInt(1, 99) + "." + getRandomInt(1, 99);
+        String response = requestGET(adminUrl, "/credential-definitions/created", 30);
+        ArrayList<String> credDefIds = JsonPath.read(response, "$.credential_definition_ids");
 
-        createSchema();
+        if (credDefIds.size() == 0) {
+            log.info("Agent does not have credential definition -> Create it");
+            version = getRandomInt(1, 99) + "." + getRandomInt(1, 99) + "." + getRandomInt(1, 99);
+            createSchema();
+            createCredDef();
+        }
+        else {
+            log.info("Agent has credential definitions -> Use first one");
+            credDefId = credDefIds.get(0);
+            response = requestGET(adminUrl, "/revocation/active-registry/" + credDefId, 30);
+            revRegId = JsonPath.read(response, "$.result.revoc_reg_id");
+        }
 
-        createCredDef();
+        log.info("Controller uses below configuration");
+        log.info("- credential definition ID:" + credDefId);
+        log.info("- revocation registry ID:" + revRegId);
 
         log.info("initialize <<< done");
     }
@@ -122,12 +137,114 @@ public class GlobalService {
         log.info("createCredDef <<<");
     }
 
+    public String createInvitation() {
+        log.info("createInvitation >>>");
+        String response = requestPOST(adminUrl,"/connections/create-invitation", "{}", 30);
+        String invitation = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation")).jsonString();
+        log.info("createInvitation <<< invitation:" + invitation);
+        return invitation;
+    }
 
-    @EventListener(ApplicationReadyEvent.class)
-    public void initializeAfterStartup() {
-        log.info("initializeAfterStartup >>> start");
+    public void sendCredentialOffer(String connectionId) {
+        String body = JsonPath.parse("{" +
+                "  connection_id: '" + connectionId + "'," +
+                "  cred_def_id: '" + credDefId + "'," +
+                "  revoc_reg_id: '" + revRegId + "'," +
+                "  credential_preview: {" +
+                "    @type: 'did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/credential-preview'," +
+                "    attributes: [" +
+                "      { name: 'name', value: 'alice' }," +
+                "      { name: 'date', value: '05-2018' }," +
+                "      { name: 'degree', value: 'maths' }," +
+                "      { name: 'age', value: '25' }" +
+                "    ]" +
+                "  }," +
+                "}").jsonString();
+        String response = requestPOST(adminUrl,"/issue-credential/send-offer", body, 30);
+    }
 
-        log.info("initializeAfterStartup <<< done");
+    public void sendProofRequest(String connectionId) {
+        String body = JsonPath.parse("{" +
+                "  connection_id: '" + connectionId + "'," +
+                "  proof_request: {" +
+                "    name: 'proof_name'," +
+                "    version: '1.0'," +
+                "    requested_attributes: {" +
+                "      attr_1: {" +
+                "        name: 'name'," +
+                "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
+                "      }," +
+                "      attr_2: {" +
+                "        name: 'date'," +
+                "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
+                "      }," +
+                "      attr_3: {" +
+                "        name: 'degree'," +
+                "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
+                "      }" +
+                "    }," +
+                "    requested_predicates: {" +
+                "      pred_1: {" +
+                "        name: 'age'," +
+                "        p_type: '>='," +
+                "        p_value: 20," +
+                "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
+                "      }" +
+                "    }" +
+                "  }" +
+                "}").jsonString();
+        String response = requestPOST(adminUrl ,"/present-proof/send-request", body, 30);
+    }
+
+
+    public void handleMessage(String topic, String body) {
+        log.info("handleMessage >>> topic:" + topic + ", body:" + body);
+
+        String state = JsonPath.read(body, "$.state");
+        switch(topic) {
+            case "connections":
+                // When connection with alice is done, send credential offer
+                if (state.equals("active")) {
+                    log.info("handleMessage - Case of topic:" + topic + ", state:" + state + " -> sendCredentialOffer");
+                    sendCredentialOffer(JsonPath.read(body, "$.connection_id"));
+                }
+                else {
+                    log.info("handleMessage - Case of topic:" + topic + ", state:" + state + " -> No action in demo");
+                }
+                break;
+            case "issue_credential":
+                // When credential is issued and acked, send proof(presentation) request
+                if (state.equals("credential_acked")) {
+                    log.info("handleMessage - Case of topic:" + topic + ", state:" + state + " -> sendProofRequest");
+                    sendProofRequest(JsonPath.read(body, "$.connection_id"));
+                }
+                else {
+                    log.info("handleMessage - Case of topic:" + topic + ", state:" + state + " -> No action in demo");
+                }
+                break;
+            case "present_proof":
+                // When proof is verified, print the result
+                if (state.equals("verified")) {
+                    log.info("handleMessage - Case of topic:" + topic + ", state:" + state + " -> Print result");
+                    String verified = JsonPath.read(body, "$.verified");
+                    String requestedProof = JsonPath.read(body, "$.presentation.requested_proof");
+                    log.info("Proof validation:" + verified);
+                    log.info("Proof requested:" + prettyJson(requestedProof));
+                }
+                else {
+                    log.info("handleMessage - Case of topic:" + topic + ", state:" + state + " -> No action in demo");
+                }
+                break;
+            case "basicmessages":
+                log.info("handleMessage - Case of topic:" + topic + ", state:" + state + " -> Print message");
+                String content = JsonPath.read(body, "$.content");
+                log.info("message:" + content);
+                break;
+            default:
+                log.warn("handleMessage - Unexpected topic:" + topic);
+        }
+
+        log.info("handleMessage <<<");
     }
 
 }

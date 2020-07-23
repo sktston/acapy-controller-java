@@ -18,18 +18,13 @@ public class GlobalController {
     public ResponseEntity webhooksTopicHandler(
             @PathVariable String topic,
             @RequestBody String body) {
-        log.info("webhooksTopicHandler - topic:" + topic + ",body:" + prettyJson(body));
+        globalService.handleMessage(topic, body);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/invitations")
     public String invitationsHandler() {
-        log.debug("invitationsHandler >>>");
-
-        String response = "invitation";
-
-        log.debug("invitationsHandler <<< " + response);
-        return response;
+        return globalService.createInvitation();
     }
 
 }
