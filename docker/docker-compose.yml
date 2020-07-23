@@ -13,8 +13,8 @@ services:
       start
         --admin 0.0.0.0 8021
         --admin-insecure-mode
-        --webhook-url http://localhost:8022/webhooks
-        --endpoint http://localhost:8020
+        --webhook-url http://host.docker.internal:8022/webhooks
+        --endpoint http://host.docker.internal:8020
         --storage-type indy
         --genesis-url http://54.180.86.51/genesis
         --inbound-transport http 0.0.0.0 8020
@@ -50,8 +50,8 @@ services:
       start
         --admin 0.0.0.0 8031
         --admin-insecure-mode
-        --webhook-url http://localhost:8032/webhooks
-        --endpoint http://localhost:8030
+        --webhook-url http://host.docker.internal:8032/webhooks
+        --endpoint http://host.docker.internal:8030
         --storage-type indy
         --genesis-url http://54.180.86.51/genesis
         --inbound-transport http 0.0.0.0 8030

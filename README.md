@@ -8,6 +8,12 @@
 cd docker
 docker-compose up
 ```
+Faber uses 8020 port (endpoint) and 8021 port (admin). \
+Check admin (swagger API) http://localhost:8021
+
+Alice uses 8030 port (endpoint) and 8031 port (admin). \
+Check admin http://localhost:8031
+
 - Run Faber Controller
 ```
 ./gradlew faber
