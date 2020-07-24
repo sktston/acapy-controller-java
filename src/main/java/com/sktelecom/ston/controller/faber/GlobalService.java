@@ -34,6 +34,9 @@ public class GlobalService {
     String credDefId; // credential definition identifier
     String revRegId; // revocation registry identifier
 
+    // check faber or faber_revoke
+    static String enableRevoke = System.getenv().getOrDefault("ENABLE_REVOKE", "false");
+
     @PostConstruct
     public void initialize() throws Exception {
         log.info("initialize >>> start");
@@ -50,13 +53,10 @@ public class GlobalService {
         else {
             log.info("Agent has credential definitions -> Use first one");
             credDefId = credDefIds.get(0);
-            response = requestGET(adminUrl, "/revocation/active-registry/" + credDefId, 30);
-            revRegId = JsonPath.read(response, "$.result.revoc_reg_id");
         }
 
         log.info("Controller uses below configuration");
         log.info("- credential definition ID:" + credDefId);
-        log.info("- revocation registry ID:" + revRegId);
 
         log.info("initialize <<< done");
     }
@@ -106,16 +106,14 @@ public class GlobalService {
         log.info("Update tails file location of the revocation registry:" + prettyJson(body));
         response = requestPATCH(adminUrl,"/revocation/registry/" + revRegId, body, 30);
 
-        body = "{}";
         log.info("Publish the revocation registry on the ledger:");
-        response = requestPOST(adminUrl,"/revocation/registry/" + revRegId + "/publish", body, 30);
+        response = requestPOST(adminUrl,"/revocation/registry/" + revRegId + "/publish", "{}", 30);
 
         log.info("Get tails file of the revocation registry:");
-        byte[] tailsFile =  WebClient.create(adminUrl).get()
+        ByteArrayResource tailsFile =  WebClient.create(adminUrl).get()
                 .uri("/revocation/registry/" + revRegId + "/tails-file")
                 .retrieve()
                 .bodyToMono(ByteArrayResource.class)
-                .map(ByteArrayResource::getByteArray)
                 .block(Duration.ofSeconds(30));
 
         log.info("Get genesis file of the revocation registry:");
@@ -134,6 +132,8 @@ public class GlobalService {
                 .bodyToMono(String.class)
                 .block(Duration.ofSeconds(30));
 
+        log.info("response:" + response);
+
         log.info("createCredDef <<<");
     }
 
@@ -149,7 +149,6 @@ public class GlobalService {
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId + "'," +
                 "  cred_def_id: '" + credDefId + "'," +
-                "  revoc_reg_id: '" + revRegId + "'," +
                 "  credential_preview: {" +
                 "    @type: 'did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/credential-preview'," +
                 "    attributes: [" +
@@ -158,7 +157,7 @@ public class GlobalService {
                 "      { name: 'degree', value: 'maths' }," +
                 "      { name: 'age', value: '25' }" +
                 "    ]" +
-                "  }," +
+                "  }" +
                 "}").jsonString();
         String response = requestPOST(adminUrl,"/issue-credential/send-offer", body, 30);
     }
@@ -170,21 +169,21 @@ public class GlobalService {
                 "    name: 'proof_name'," +
                 "    version: '1.0'," +
                 "    requested_attributes: {" +
-                "      attr_1: {" +
+                "      attr_name: {" +
                 "        name: 'name'," +
                 "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
                 "      }," +
-                "      attr_2: {" +
+                "      attr_date: {" +
                 "        name: 'date'," +
                 "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
                 "      }," +
-                "      attr_3: {" +
+                "      attr_degree: {" +
                 "        name: 'degree'," +
                 "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
                 "      }" +
                 "    }," +
                 "    requested_predicates: {" +
-                "      pred_1: {" +
+                "      pred_age: {" +
                 "        name: 'age'," +
                 "        p_type: '>='," +
                 "        p_value: 20," +
@@ -196,6 +195,26 @@ public class GlobalService {
         String response = requestPOST(adminUrl ,"/present-proof/send-request", body, 30);
     }
 
+    public void printProofResult(String body) {
+        String requestedProof = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.presentation.requested_proof")).jsonString();
+        log.info("  - Proof requested:" + prettyJson(requestedProof));
+        String verified = JsonPath.read(body, "$.verified");
+        log.info("  - Proof validation:" + verified);
+    }
+
+    public void revokeCredential(String revRegId, String credRevId) {
+        log.info("revokeCredential >>> revRegId:" + revRegId + ", credRevId:" + credRevId);
+        String response =  WebClient.create(adminUrl).post()
+                .uri(uriBuilder -> uriBuilder.path("/issue-credential/revoke")
+                        .queryParam("rev_reg_id", revRegId)
+                        .queryParam("cred_rev_id", credRevId)
+                        .queryParam("publish", true)
+                        .build()
+                )
+                .retrieve()
+                .bodyToMono(String.class)
+                .block(Duration.ofSeconds(30));
+    }
 
     public void handleMessage(String topic, String body) {
         log.info("handleMessage >>> topic:" + topic + ", body:" + body);
@@ -205,46 +224,43 @@ public class GlobalService {
             case "connections":
                 // When connection with alice is done, send credential offer
                 if (state.equals("active")) {
-                    log.info("handleMessage - Case of topic:" + topic + ", state:" + state + " -> sendCredentialOffer");
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
                     sendCredentialOffer(JsonPath.read(body, "$.connection_id"));
                 }
                 else {
-                    log.info("handleMessage - Case of topic:" + topic + ", state:" + state + " -> No action in demo");
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
                 }
                 break;
             case "issue_credential":
                 // When credential is issued and acked, send proof(presentation) request
                 if (state.equals("credential_acked")) {
-                    log.info("handleMessage - Case of topic:" + topic + ", state:" + state + " -> sendProofRequest");
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProofRequest");
+                    if (enableRevoke.equals("true")) {
+                        revokeCredential(JsonPath.read(body, "$.revoc_reg_id"), JsonPath.read(body, "$.revocation_id"));
+                    }
                     sendProofRequest(JsonPath.read(body, "$.connection_id"));
                 }
                 else {
-                    log.info("handleMessage - Case of topic:" + topic + ", state:" + state + " -> No action in demo");
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
                 }
                 break;
             case "present_proof":
                 // When proof is verified, print the result
                 if (state.equals("verified")) {
-                    log.info("handleMessage - Case of topic:" + topic + ", state:" + state + " -> Print result");
-                    String verified = JsonPath.read(body, "$.verified");
-                    String requestedProof = JsonPath.read(body, "$.presentation.requested_proof");
-                    log.info("Proof validation:" + verified);
-                    log.info("Proof requested:" + prettyJson(requestedProof));
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print result");
+                    printProofResult(body);
                 }
                 else {
-                    log.info("handleMessage - Case of topic:" + topic + ", state:" + state + " -> No action in demo");
+                    log.info("- Case (topic:topic:" + topic + ", state:" + state + ") -> No action in demo");
                 }
                 break;
             case "basicmessages":
-                log.info("handleMessage - Case of topic:" + topic + ", state:" + state + " -> Print message");
-                String content = JsonPath.read(body, "$.content");
-                log.info("message:" + content);
+                log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print message");
+                log.info("  - message:" + JsonPath.read(body, "$.content"));
                 break;
             default:
-                log.warn("handleMessage - Unexpected topic:" + topic);
+                log.warn("- Warning Unexpected topic:" + topic);
         }
-
-        log.info("handleMessage <<<");
     }
 
 }
