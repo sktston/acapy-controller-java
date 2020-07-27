@@ -3,23 +3,19 @@ package com.sktelecom.ston.controller.faber;
 import com.jayway.jsonpath.JsonPath;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.annotation.PostConstruct;
 
-import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 
 import static com.sktelecom.ston.controller.utils.Common.*;
+import static com.sktelecom.ston.controller.utils.Common.requestGET;
 
 @RequiredArgsConstructor
 @Service
@@ -59,6 +55,53 @@ public class GlobalService {
         log.info("- credential definition ID:" + credDefId);
 
         log.info("initialize <<< done");
+    }
+
+    public void handleMessage(String topic, String body) {
+        log.info("handleMessage >>> topic:" + topic + ", body:" + body);
+
+        String state = JsonPath.read(body, "$.state");
+        switch(topic) {
+            case "connections":
+                // When connection with alice is done, send credential offer
+                if (state.equals("active")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
+                    sendCredentialOffer(JsonPath.read(body, "$.connection_id"));
+                }
+                else {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
+                }
+                break;
+            case "issue_credential":
+                // When credential is issued and acked, send proof(presentation) request
+                if (state.equals("credential_acked")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProofRequest");
+                    if (enableRevoke.equals("true")) {
+                        revokeCredential(JsonPath.read(body, "$.revoc_reg_id"), JsonPath.read(body, "$.revocation_id"));
+                    }
+                    sendProofRequest(JsonPath.read(body, "$.connection_id"));
+                }
+                else {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
+                }
+                break;
+            case "present_proof":
+                // When proof is verified, print the result
+                if (state.equals("verified")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print result");
+                    printProofResult(body);
+                }
+                else {
+                    log.info("- Case (topic:topic:" + topic + ", state:" + state + ") -> No action in demo");
+                }
+                break;
+            case "basicmessages":
+                log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print message");
+                log.info("  - message:" + JsonPath.read(body, "$.content"));
+                break;
+            default:
+                log.warn("- Warning Unexpected topic:" + topic);
+        }
     }
 
     public void createSchema() {
@@ -110,27 +153,17 @@ public class GlobalService {
         response = requestPOST(adminUrl,"/revocation/registry/" + revRegId + "/publish", "{}", 30);
 
         log.info("Get tails file of the revocation registry:");
-        ByteArrayResource tailsFile =  WebClient.create(adminUrl).get()
-                .uri("/revocation/registry/" + revRegId + "/tails-file")
-                .retrieve()
-                .bodyToMono(ByteArrayResource.class)
-                .block(Duration.ofSeconds(30));
+        ByteArrayResource tailsFile = requestGETByteArray(adminUrl, "/revocation/registry/" + revRegId + "/tails-file", 30);
 
         log.info("Get genesis file of the revocation registry:");
-        String genesis =  WebClient.create(vonNetworkUrl).get()
-                .uri("/genesis")
-                .retrieve()
-                .bodyToMono(String.class)
-                .block(Duration.ofSeconds(30));
+        String genesis =  requestGET(vonNetworkUrl, "/genesis", 30);
 
         log.info("Put tails file to tails file server:");
-        response =  WebClient.create(tailsServerUrl).put()
-                .uri("/" + revRegId)
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(BodyInserters.fromMultipartData("genesis", genesis).with("tails", tailsFile))
-                .retrieve()
-                .bodyToMono(String.class)
-                .block(Duration.ofSeconds(30));
+
+        MultiValueMap<String, Object> multiData = new LinkedMultiValueMap<>();
+        multiData.add("genesis", genesis);
+        multiData.add("tails", tailsFile);
+        response = requestPUT(tailsServerUrl, "/" + revRegId, multiData,30);
 
         log.info("response:" + response);
 
@@ -204,63 +237,13 @@ public class GlobalService {
 
     public void revokeCredential(String revRegId, String credRevId) {
         log.info("revokeCredential >>> revRegId:" + revRegId + ", credRevId:" + credRevId);
-        String response =  WebClient.create(adminUrl).post()
-                .uri(uriBuilder -> uriBuilder.path("/issue-credential/revoke")
-                        .queryParam("rev_reg_id", revRegId)
-                        .queryParam("cred_rev_id", credRevId)
-                        .queryParam("publish", true)
-                        .build()
-                )
-                .retrieve()
-                .bodyToMono(String.class)
-                .block(Duration.ofSeconds(30));
-    }
 
-    public void handleMessage(String topic, String body) {
-        log.info("handleMessage >>> topic:" + topic + ", body:" + body);
-
-        String state = JsonPath.read(body, "$.state");
-        switch(topic) {
-            case "connections":
-                // When connection with alice is done, send credential offer
-                if (state.equals("active")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
-                    sendCredentialOffer(JsonPath.read(body, "$.connection_id"));
-                }
-                else {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
-                }
-                break;
-            case "issue_credential":
-                // When credential is issued and acked, send proof(presentation) request
-                if (state.equals("credential_acked")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProofRequest");
-                    if (enableRevoke.equals("true")) {
-                        revokeCredential(JsonPath.read(body, "$.revoc_reg_id"), JsonPath.read(body, "$.revocation_id"));
-                    }
-                    sendProofRequest(JsonPath.read(body, "$.connection_id"));
-                }
-                else {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
-                }
-                break;
-            case "present_proof":
-                // When proof is verified, print the result
-                if (state.equals("verified")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print result");
-                    printProofResult(body);
-                }
-                else {
-                    log.info("- Case (topic:topic:" + topic + ", state:" + state + ") -> No action in demo");
-                }
-                break;
-            case "basicmessages":
-                log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print message");
-                log.info("  - message:" + JsonPath.read(body, "$.content"));
-                break;
-            default:
-                log.warn("- Warning Unexpected topic:" + topic);
-        }
+        String uri = UriComponentsBuilder.fromPath("/issue-credential/revoke")
+                .queryParam("rev_reg_id", revRegId)
+                .queryParam("cred_rev_id", credRevId)
+                .queryParam("publish", true)
+                .build().toUriString();
+        String response =  requestPOST(adminUrl, uri, "{}", 30);
     }
 
 }

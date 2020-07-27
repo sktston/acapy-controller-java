@@ -7,9 +7,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.reactive.function.BodyInserter;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriBuilder;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.Random;
 
@@ -28,8 +32,8 @@ public class Common {
         return r.nextInt((max - min) + 1) + min;
     }
 
-    public static String requestGET(String adminUrl, String uri, int timeoutSec) {
-        return WebClient.create(adminUrl).get()
+    public static String requestGET(String url, String uri, int timeoutSec) {
+        return WebClient.create(url).get()
                 .uri(uri)
                 .accept(MediaType.APPLICATION_JSON)
                 .retrieve()
@@ -37,8 +41,16 @@ public class Common {
                 .block(Duration.ofSeconds(timeoutSec));
     }
 
-    public static String requestPOST(String adminUrl, String uri, String body, int timeoutSec) {
-        return WebClient.create(adminUrl).post()
+    public static ByteArrayResource requestGETByteArray(String url, String uri, int timeoutSec) {
+        return WebClient.create(url).get()
+                .uri(uri)
+                .retrieve()
+                .bodyToMono(ByteArrayResource.class)
+                .block(Duration.ofSeconds(timeoutSec));
+    }
+
+    public static String requestPOST(String url, String uri, String body, int timeoutSec) {
+        return WebClient.create(url).post()
                 .uri(uri)
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
@@ -48,8 +60,8 @@ public class Common {
                 .block(Duration.ofSeconds(timeoutSec));
     }
 
-    public static String requestPATCH(String adminUrl, String uri, String body, int timeoutSec) {
-        return WebClient.create(adminUrl).patch()
+    public static String requestPATCH(String url, String uri, String body, int timeoutSec) {
+        return WebClient.create(url).patch()
                 .uri(uri)
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
@@ -57,6 +69,16 @@ public class Common {
                 .retrieve()
                 .bodyToMono(String.class)
                 .block(Duration.ofSeconds(timeoutSec));
+    }
+
+    public static String requestPUT(String url, String uri, MultiValueMap<String, Object> body, int timeoutSec) {
+        return WebClient.create(url).put()
+                .uri(uri)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(body))
+                .retrieve()
+                .bodyToMono(String.class)
+                .block(Duration.ofSeconds(30));
     }
 
 }

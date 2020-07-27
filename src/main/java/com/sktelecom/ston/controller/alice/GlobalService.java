@@ -5,14 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
-
-import javax.annotation.PostConstruct;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
@@ -30,6 +23,43 @@ public class GlobalService {
         log.info("initializeAfterStartup >>> start");
         receiveInvitation();
         log.info("initializeAfterStartup <<< done");
+    }
+
+    public void handleMessage(String topic, String body) {
+        log.info("handleMessage >>> topic:" + topic + ", body:" + body);
+
+        String state = JsonPath.read(body, "$.state");
+        switch(topic) {
+            case "connections":
+                log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
+                break;
+            case "issue_credential":
+                // When credential offer is received, send credential request
+                if (state.equals("offer_received")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequest");
+                    sendCredentialRequest(JsonPath.read(body, "$.credential_exchange_id"));
+                }
+                else {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
+                }
+                break;
+            case "present_proof":
+                // When proof request is received, send proof(presentation)
+                if (state.equals("request_received")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProof");
+                    sendProof(body);
+                }
+                else {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
+                }
+                break;
+            case "basicmessages":
+                log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print message");
+                log.info("  - message:" + JsonPath.read(body, "$.content"));
+                break;
+            default:
+                log.warn("- Warning Unexpected topic:" + topic);
+        }
     }
 
     public void receiveInvitation() {
@@ -76,43 +106,6 @@ public class GlobalService {
                 .put("$", "self_attested_attributes", selfAttrs).jsonString();
 
         response = requestPOST(adminUrl,"/present-proof/records/" + presExId + "/send-presentation", body, 30);
-    }
-
-    public void handleMessage(String topic, String body) {
-        log.info("handleMessage >>> topic:" + topic + ", body:" + body);
-
-        String state = JsonPath.read(body, "$.state");
-        switch(topic) {
-            case "connections":
-                log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
-                break;
-            case "issue_credential":
-                // When credential offer is received, send credential request
-                if (state.equals("offer_received")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequest");
-                    sendCredentialRequest(JsonPath.read(body, "$.credential_exchange_id"));
-                }
-                else {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
-                }
-                break;
-            case "present_proof":
-                // When proof request is received, send proof(presentation)
-                if (state.equals("request_received")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProof");
-                    sendProof(body);
-                }
-                else {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
-                }
-                break;
-            case "basicmessages":
-                log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print message");
-                log.info("  - message:" + JsonPath.read(body, "$.content"));
-                break;
-            default:
-                log.warn("- Warning Unexpected topic:" + topic);
-        }
     }
 
 }

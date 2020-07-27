@@ -5,8 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import static com.sktelecom.ston.controller.utils.Common.prettyJson;
-
 @RequiredArgsConstructor
 @Slf4j
 @RestController
