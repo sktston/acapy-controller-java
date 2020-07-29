@@ -12,17 +12,22 @@ public class GlobalController {
 
     private final GlobalService globalService;
 
+    @GetMapping("/invitation")
+    public String invitationHandler() {
+        return globalService.createInvitation();
+    }
+
+    @GetMapping("/invitation-url")
+    public String invitationUrlHandler() {
+        return globalService.createInvitationUrl();
+    }
+
     @PostMapping("/webhooks/topic/{topic}/")
     public ResponseEntity webhooksTopicHandler(
             @PathVariable String topic,
             @RequestBody String body) {
         globalService.handleMessage(topic, body);
         return ResponseEntity.ok().build();
-    }
-
-    @GetMapping("/invitations")
-    public String invitationsHandler() {
-        return globalService.createInvitation();
     }
 
 }

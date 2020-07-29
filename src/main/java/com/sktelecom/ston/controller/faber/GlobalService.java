@@ -57,6 +57,22 @@ public class GlobalService {
         log.info("initialize <<< done");
     }
 
+    public String createInvitation() {
+        log.info("createInvitation >>>");
+        String response = requestPOST(adminUrl,"/connections/create-invitation", "{}", 30);
+        String invitation = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation")).jsonString();
+        log.info("createInvitation <<< invitation:" + invitation);
+        return invitation;
+    }
+
+    public String createInvitationUrl() {
+        log.info("createInvitationUrl >>>");
+        String response = requestPOST(adminUrl,"/connections/create-invitation", "{}", 30);
+        String invitationUrl = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation_url")).jsonString();
+        log.info("createInvitationUrl <<< invitationUrl:" + invitationUrl);
+        return invitationUrl;
+    }
+
     public void handleMessage(String topic, String body) {
         log.info("handleMessage >>> topic:" + topic + ", body:" + body);
 
@@ -168,14 +184,6 @@ public class GlobalService {
         log.info("response:" + response);
 
         log.info("createCredDef <<<");
-    }
-
-    public String createInvitation() {
-        log.info("createInvitation >>>");
-        String response = requestPOST(adminUrl,"/connections/create-invitation", "{}", 30);
-        String invitation = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation")).jsonString();
-        log.info("createInvitation <<< invitation:" + invitation);
-        return invitation;
     }
 
     public void sendCredentialOffer(String connectionId) {

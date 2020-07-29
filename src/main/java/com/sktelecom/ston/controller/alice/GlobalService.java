@@ -64,10 +64,10 @@ public class GlobalService {
 
     public void receiveInvitation() {
         log.info("receiveInvitation >>>");
-        String invitation = requestGET(faberContUrl,"/invitations", 30);
+        String invitation = requestGET(faberContUrl,"/invitation", 30);
         log.info("invitation:" + invitation);
         String response = requestPOST(adminUrl,"/connections/receive-invitation", invitation, 30);
-        log.info("receiveInvitation <<< invitation:" + invitation);
+        log.info("receiveInvitation <<<");
     }
 
     public void sendCredentialRequest(String credExId) {
