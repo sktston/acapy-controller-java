@@ -68,7 +68,7 @@ public class GlobalService {
     public String createInvitationUrl() {
         log.info("createInvitationUrl >>>");
         String response = requestPOST(adminUrl,"/connections/create-invitation", "{}", 30);
-        String invitationUrl = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation_url")).jsonString();
+        String invitationUrl = JsonPath.read(response, "$.invitation_url");
         log.info("createInvitationUrl <<< invitationUrl:" + invitationUrl);
         return invitationUrl;
     }
