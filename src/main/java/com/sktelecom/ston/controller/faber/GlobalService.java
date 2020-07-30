@@ -3,6 +3,8 @@ package com.sktelecom.ston.controller.faber;
 import com.jayway.jsonpath.JsonPath;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -22,20 +24,17 @@ import static com.sktelecom.ston.controller.utils.Common.requestGET;
 @Slf4j
 public class GlobalService {
     final String adminUrl = "http://localhost:8021";
-    final String tailsServerUrl = "http://13.124.169.12";
-    final String vonNetworkUrl = "http://54.180.86.51";
 
     String version; // version for schemaId and credDefId
     String schemaId; // schema identifier
     String credDefId; // credential definition identifier
-    String revRegId; // revocation registry identifier
 
     // check faber or faber_revoke
     static String enableRevoke = System.getenv().getOrDefault("ENABLE_REVOKE", "false");
 
-    @PostConstruct
-    public void initialize() throws Exception {
-        log.info("initialize >>> start");
+    @EventListener(ApplicationReadyEvent.class)
+    public void initializeAfterStartup() {
+        log.info("initializeAfterStartup >>> start");
 
         String response = requestGET(adminUrl, "/credential-definitions/created", 30);
         ArrayList<String> credDefIds = JsonPath.read(response, "$.credential_definition_ids");
@@ -54,7 +53,8 @@ public class GlobalService {
         log.info("Controller uses below configuration");
         log.info("- credential definition ID:" + credDefId);
 
-        log.info("initialize <<< done");
+        log.info("initializeAfterStartup <<< done");
+        log.info("Setting of schema and credential definition is done. Run alice now.");
     }
 
     public String createInvitation() {
@@ -115,6 +115,9 @@ public class GlobalService {
                 log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print message");
                 log.info("  - message:" + JsonPath.read(body, "$.content"));
                 break;
+            case "revocation_registry":
+                log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
+                break;
             default:
                 log.warn("- Warning Unexpected topic:" + topic);
         }
@@ -138,50 +141,15 @@ public class GlobalService {
     public void createCredDef() {
         log.info("createCredDef >>>");
 
-        String body;
-        String response;
-
-        body = JsonPath.parse("{" +
+        String body = JsonPath.parse("{" +
                 "  schema_id: '" + schemaId + "'," +
                 "  tag: 'tag." + version + "'," +
-                "  support_revocation: true" +
+                "  support_revocation: true," +
+                "  revocation_registry_size: 50" +
                 "}").jsonString();
         log.info("Create a new credential definition on the ledger:" + prettyJson(body));
-        response = requestPOST(adminUrl,"/credential-definitions", body, 30);
+        String response = requestPOST(adminUrl,"/credential-definitions", body, 30);
         credDefId = JsonPath.read(response, "$.credential_definition_id");
-
-        body = JsonPath.parse("{" +
-                "  max_cred_num: 100," +
-                "  credential_definition_id: '" + credDefId + "'," +
-                "  issuance_by_default: true" +
-                "}").jsonString();
-        log.info("Create a new revocation registry:" + prettyJson(body));
-        response = requestPOST(adminUrl,"/revocation/create-registry", body, 30);
-        revRegId = JsonPath.read(response, "$.result.revoc_reg_id");
-
-        body = JsonPath.parse("{" +
-                "  tails_public_uri: '" + tailsServerUrl + "/" + revRegId + "'" +
-                "}").jsonString();
-        log.info("Update tails file location of the revocation registry:" + prettyJson(body));
-        response = requestPATCH(adminUrl,"/revocation/registry/" + revRegId, body, 30);
-
-        log.info("Publish the revocation registry on the ledger:");
-        response = requestPOST(adminUrl,"/revocation/registry/" + revRegId + "/publish", "{}", 30);
-
-        log.info("Get tails file of the revocation registry:");
-        ByteArrayResource tailsFile = requestGETByteArray(adminUrl, "/revocation/registry/" + revRegId + "/tails-file", 30);
-
-        log.info("Get genesis file of the revocation registry:");
-        String genesis =  requestGET(vonNetworkUrl, "/genesis", 30);
-
-        log.info("Put tails file to tails file server:");
-
-        MultiValueMap<String, Object> multiData = new LinkedMultiValueMap<>();
-        multiData.add("genesis", genesis);
-        multiData.add("tails", tailsFile);
-        response = requestPUT(tailsServerUrl, "/" + revRegId, multiData,30);
-
-        log.info("response:" + response);
 
         log.info("createCredDef <<<");
     }

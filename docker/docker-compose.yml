@@ -15,6 +15,7 @@ services:
         --admin-insecure-mode
         --webhook-url http://host.docker.internal:8022/webhooks
         --endpoint http://host.docker.internal:8020
+        --tails-server-base-url http://13.124.169.12
         --storage-type indy
         --genesis-url http://54.180.86.51/genesis
         --inbound-transport http 0.0.0.0 8020
