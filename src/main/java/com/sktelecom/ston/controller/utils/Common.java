@@ -5,13 +5,11 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.MediaType;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
-import java.time.Duration;
+import okhttp3.*;
+
+import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -28,53 +26,43 @@ public class Common {
         return r.nextInt((max - min) + 1) + min;
     }
 
-    public static String requestGET(String url, String uri, int timeoutSec) {
-        return WebClient.create(url).get()
-                .uri(uri)
-                .accept(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .bodyToMono(String.class)
-                .block(Duration.ofSeconds(timeoutSec));
+    public static String requestGET(String url) {
+        OkHttpClient client = new OkHttpClient.Builder()
+                .writeTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .connectTimeout(60, TimeUnit.SECONDS)
+                .callTimeout(60, TimeUnit.SECONDS)
+                .build();
+        Request request = new Request.Builder()
+                .url(url)
+                .get()
+                .build();
+        try {
+            Response response = client.newCall(request).execute();
+            return response.body().string();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
-    public static ByteArrayResource requestGETByteArray(String url, String uri, int timeoutSec) {
-        return WebClient.create(url).get()
-                .uri(uri)
-                .retrieve()
-                .bodyToMono(ByteArrayResource.class)
-                .block(Duration.ofSeconds(timeoutSec));
+    public static String requestPOST(String url, String json) {
+        OkHttpClient client = new OkHttpClient.Builder()
+                .writeTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .connectTimeout(60, TimeUnit.SECONDS)
+                .callTimeout(60, TimeUnit.SECONDS)
+                .build();
+        Request request = new Request.Builder()
+                .url(url)
+                .post(RequestBody.create(json, MediaType.parse("application/json")))
+                .build();
+        try {
+            Response response = client.newCall(request).execute();
+            return response.body().string();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
-
-    public static String requestPOST(String url, String uri, String body, int timeoutSec) {
-        return WebClient.create(url).post()
-                .uri(uri)
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromObject(body))
-                .retrieve()
-                .bodyToMono(String.class)
-                .block(Duration.ofSeconds(timeoutSec));
-    }
-
-    public static String requestPATCH(String url, String uri, String body, int timeoutSec) {
-        return WebClient.create(url).patch()
-                .uri(uri)
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromObject(body))
-                .retrieve()
-                .bodyToMono(String.class)
-                .block(Duration.ofSeconds(timeoutSec));
-    }
-
-    public static String requestPUT(String url, String uri, MultiValueMap<String, Object> body, int timeoutSec) {
-        return WebClient.create(url).put()
-                .uri(uri)
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(BodyInserters.fromMultipartData(body))
-                .retrieve()
-                .bodyToMono(String.class)
-                .block(Duration.ofSeconds(30));
-    }
-
 }

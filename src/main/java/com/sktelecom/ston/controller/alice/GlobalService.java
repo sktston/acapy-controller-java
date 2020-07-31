@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
@@ -64,19 +65,19 @@ public class GlobalService {
 
     public void receiveInvitation() {
         log.info("receiveInvitation >>>");
-        String invitation = requestGET(faberContUrl,"/invitation", 30);
+        String invitation = requestGET(faberContUrl + "/invitation");
         log.info("invitation:" + invitation);
-        String response = requestPOST(adminUrl,"/connections/receive-invitation", invitation, 30);
+        String response = requestPOST(adminUrl + "/connections/receive-invitation", invitation);
         log.info("receiveInvitation <<<");
     }
 
     public void sendCredentialRequest(String credExId) {
-        String response = requestPOST(adminUrl,"/issue-credential/records/" + credExId + "/send-request", "{}", 30);
+        String response = requestPOST(adminUrl + "/issue-credential/records/" + credExId + "/send-request", "{}");
     }
 
     public void sendProof(String reqBody) {
         String presExId = JsonPath.read(reqBody, "$.presentation_exchange_id");
-        String response = requestGET(adminUrl, "/present-proof/records/" + presExId + "/credentials", 30);
+        String response = requestGET(adminUrl + "/present-proof/records/" + presExId + "/credentials");
 
         ArrayList<LinkedHashMap<String, Object>> credentials = JsonPath.read(response, "$");
         int credRevId = 0;
@@ -105,7 +106,7 @@ public class GlobalService {
                 .put("$", "requested_predicates", reqPreds)
                 .put("$", "self_attested_attributes", selfAttrs).jsonString();
 
-        response = requestPOST(adminUrl,"/present-proof/records/" + presExId + "/send-presentation", body, 30);
+        response = requestPOST(adminUrl + "/present-proof/records/" + presExId + "/send-presentation", body);
     }
 
 }

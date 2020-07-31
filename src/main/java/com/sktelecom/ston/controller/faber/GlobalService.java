@@ -3,15 +3,10 @@ package com.sktelecom.ston.controller.faber;
 import com.jayway.jsonpath.JsonPath;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.HttpUrl;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.util.UriComponentsBuilder;
-
-import javax.annotation.PostConstruct;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -36,7 +31,7 @@ public class GlobalService {
     public void initializeAfterStartup() {
         log.info("initializeAfterStartup >>> start");
 
-        String response = requestGET(adminUrl, "/credential-definitions/created", 30);
+        String response = requestGET(adminUrl + "/credential-definitions/created");
         ArrayList<String> credDefIds = JsonPath.read(response, "$.credential_definition_ids");
 
         if (credDefIds.size() == 0) {
@@ -59,7 +54,7 @@ public class GlobalService {
 
     public String createInvitation() {
         log.info("createInvitation >>>");
-        String response = requestPOST(adminUrl,"/connections/create-invitation", "{}", 30);
+        String response = requestPOST(adminUrl + "/connections/create-invitation", "{}");
         String invitation = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation")).jsonString();
         log.info("createInvitation <<< invitation:" + invitation);
         return invitation;
@@ -67,7 +62,7 @@ public class GlobalService {
 
     public String createInvitationUrl() {
         log.info("createInvitationUrl >>>");
-        String response = requestPOST(adminUrl,"/connections/create-invitation", "{}", 30);
+        String response = requestPOST(adminUrl + "/connections/create-invitation", "{}");
         String invitationUrl = JsonPath.read(response, "$.invitation_url");
         log.info("createInvitationUrl <<< invitationUrl:" + invitationUrl);
         return invitationUrl;
@@ -132,7 +127,7 @@ public class GlobalService {
                 "  attributes: ['name', 'date', 'degree', 'age']" +
                 "}").jsonString();
         log.info("Create a new schema on the ledger:" + prettyJson(body));
-        String response = requestPOST(adminUrl,"/schemas", body, 30);
+        String response = requestPOST(adminUrl + "/schemas", body);
         schemaId = JsonPath.read(response, "$.schema_id");
 
         log.info("createSchema <<<");
@@ -148,7 +143,7 @@ public class GlobalService {
                 "  revocation_registry_size: 50" +
                 "}").jsonString();
         log.info("Create a new credential definition on the ledger:" + prettyJson(body));
-        String response = requestPOST(adminUrl,"/credential-definitions", body, 30);
+        String response = requestPOST(adminUrl + "/credential-definitions", body);
         credDefId = JsonPath.read(response, "$.credential_definition_id");
 
         log.info("createCredDef <<<");
@@ -168,7 +163,7 @@ public class GlobalService {
                 "    ]" +
                 "  }" +
                 "}").jsonString();
-        String response = requestPOST(adminUrl,"/issue-credential/send-offer", body, 30);
+        String response = requestPOST(adminUrl + "/issue-credential/send-offer", body);
     }
 
     public void sendProofRequest(String connectionId) {
@@ -201,7 +196,7 @@ public class GlobalService {
                 "    }" +
                 "  }" +
                 "}").jsonString();
-        String response = requestPOST(adminUrl ,"/present-proof/send-request", body, 30);
+        String response = requestPOST(adminUrl + "/present-proof/send-request", body);
     }
 
     public void printProofResult(String body) {
@@ -214,12 +209,13 @@ public class GlobalService {
     public void revokeCredential(String revRegId, String credRevId) {
         log.info("revokeCredential >>> revRegId:" + revRegId + ", credRevId:" + credRevId);
 
-        String uri = UriComponentsBuilder.fromPath("/issue-credential/revoke")
-                .queryParam("rev_reg_id", revRegId)
-                .queryParam("cred_rev_id", credRevId)
-                .queryParam("publish", true)
-                .build().toUriString();
-        String response =  requestPOST(adminUrl, uri, "{}", 30);
+        HttpUrl.Builder urlBuilder = HttpUrl.parse(adminUrl + "/issue-credential/revoke").newBuilder();
+        urlBuilder.addQueryParameter("rev_reg_id", revRegId);
+        urlBuilder.addQueryParameter("cred_rev_id", credRevId);
+        urlBuilder.addQueryParameter("publish", "true");
+        String url = urlBuilder.build().toString();
+
+        String response =  requestPOST(url, "{}");
     }
 
 }
