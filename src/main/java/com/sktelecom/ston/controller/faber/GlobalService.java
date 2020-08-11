@@ -24,12 +24,16 @@ public class GlobalService {
     String schemaId; // schema identifier
     String credDefId; // credential definition identifier
 
-    // check faber or faber_revoke
-    static String enableRevoke = System.getenv().getOrDefault("ENABLE_REVOKE", "false");
+    // check options
+    static boolean enableRevoke = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_REVOKE", "false"));
+    static boolean enableObserveMode = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_OBSERVE_MODE", "false"));
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
         log.info("initializeAfterStartup >>> start");
+
+        if(enableObserveMode)
+            return;
 
         String response = requestGET(adminUrl + "/credential-definitions/created");
         ArrayList<String> credDefIds = JsonPath.read(response, "$.credential_definition_ids");
@@ -48,8 +52,8 @@ public class GlobalService {
         log.info("Controller uses below configuration");
         log.info("- credential definition ID:" + credDefId);
 
-        log.info("initializeAfterStartup <<< done");
         log.info("Setting of schema and credential definition is done. Run alice now.");
+        log.info("initializeAfterStartup <<< done");
     }
 
     public String createInvitation() {
@@ -75,7 +79,7 @@ public class GlobalService {
         switch(topic) {
             case "connections":
                 // When connection with alice is done, send credential offer
-                if (state.equals("active")) {
+                if (state.equals("active") && !enableObserveMode) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
                     sendCredentialOffer(JsonPath.read(body, "$.connection_id"));
                 }
@@ -85,9 +89,9 @@ public class GlobalService {
                 break;
             case "issue_credential":
                 // When credential is issued and acked, send proof(presentation) request
-                if (state.equals("credential_acked")) {
+                if (state.equals("credential_acked") && !enableObserveMode) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProofRequest");
-                    if (enableRevoke.equals("true")) {
+                    if (enableRevoke) {
                         revokeCredential(JsonPath.read(body, "$.revoc_reg_id"), JsonPath.read(body, "$.revocation_id"));
                     }
                     sendProofRequest(JsonPath.read(body, "$.connection_id"));
@@ -98,7 +102,7 @@ public class GlobalService {
                 break;
             case "present_proof":
                 // When proof is verified, print the result
-                if (state.equals("verified")) {
+                if (state.equals("verified") && !enableObserveMode) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print result");
                     printProofResult(body);
                 }
