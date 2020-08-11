@@ -4,10 +4,14 @@ import com.jayway.jsonpath.JsonPath;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.HttpUrl;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
@@ -19,10 +23,14 @@ import static com.sktelecom.ston.controller.utils.Common.requestGET;
 @Slf4j
 public class GlobalService {
     final String adminUrl = "http://localhost:8021";
+    final String vonNetworkUrl = "http://54.180.86.51";
+    final String tailsServerUrl = "http://13.124.169.12";
 
     String version; // version for schemaId and credDefId
     String schemaId; // schema identifier
     String credDefId; // credential definition identifier
+    String revRegId; // revocation registry identifier
+    String walletName = "faber.agent";
 
     // check options
     static boolean enableRevoke = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_REVOKE", "false"));
@@ -35,14 +43,15 @@ public class GlobalService {
         if(enableObserveMode)
             return;
 
-        String response = requestGET(adminUrl + "/credential-definitions/created");
+        String response = requestGET(adminUrl + "/credential-definitions/created", walletName);
         ArrayList<String> credDefIds = JsonPath.read(response, "$.credential_definition_ids");
 
         if (credDefIds.size() == 0) {
             log.info("Agent does not have credential definition -> Create it");
             version = getRandomInt(1, 99) + "." + getRandomInt(1, 99) + "." + getRandomInt(1, 99);
             createSchema();
-            createCredDef();
+            createCredentialDefinition();
+            createRevocationRegistry();
         }
         else {
             log.info("Agent has credential definitions -> Use first one");
@@ -58,7 +67,7 @@ public class GlobalService {
 
     public String createInvitation() {
         log.info("createInvitation >>>");
-        String response = requestPOST(adminUrl + "/connections/create-invitation", "{}");
+        String response = requestPOST(adminUrl + "/connections/invite-with-endpoint", walletName, "{}");
         String invitation = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation")).jsonString();
         log.info("createInvitation <<< invitation:" + invitation);
         return invitation;
@@ -66,7 +75,7 @@ public class GlobalService {
 
     public String createInvitationUrl() {
         log.info("createInvitationUrl >>>");
-        String response = requestPOST(adminUrl + "/connections/create-invitation", "{}");
+        String response = requestPOST(adminUrl + "/connections/invite-with-endpoint", walletName, "{}");
         String invitationUrl = JsonPath.read(response, "$.invitation_url");
         log.info("createInvitationUrl <<< invitationUrl:" + invitationUrl);
         return invitationUrl;
@@ -78,8 +87,12 @@ public class GlobalService {
         String state = JsonPath.read(body, "$.state");
         switch(topic) {
             case "connections":
+                if (state.equals("request") && !enableObserveMode) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> acceptRequest");
+                    acceptRequest(JsonPath.read(body, "$.connection_id"));
+                }
                 // When connection with alice is done, send credential offer
-                if (state.equals("active") && !enableObserveMode) {
+                else if (state.equals("active") && !enableObserveMode) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
                     sendCredentialOffer(JsonPath.read(body, "$.connection_id"));
                 }
@@ -131,26 +144,69 @@ public class GlobalService {
                 "  attributes: ['name', 'date', 'degree', 'age']" +
                 "}").jsonString();
         log.info("Create a new schema on the ledger:" + prettyJson(body));
-        String response = requestPOST(adminUrl + "/schemas", body);
+        String response = requestPOST(adminUrl + "/schemas", walletName, body);
         schemaId = JsonPath.read(response, "$.schema_id");
 
         log.info("createSchema <<<");
     }
 
-    public void createCredDef() {
-        log.info("createCredDef >>>");
+    public void createCredentialDefinition() {
+        log.info("createCredentialDefinition >>>");
 
         String body = JsonPath.parse("{" +
                 "  schema_id: '" + schemaId + "'," +
                 "  tag: 'tag." + version + "'," +
-                "  support_revocation: true," +
-                "  revocation_registry_size: 50" +
+                "  support_revocation: true" +
                 "}").jsonString();
         log.info("Create a new credential definition on the ledger:" + prettyJson(body));
-        String response = requestPOST(adminUrl + "/credential-definitions", body);
+        String response = requestPOST(adminUrl + "/credential-definitions", walletName, body);
         credDefId = JsonPath.read(response, "$.credential_definition_id");
 
-        log.info("createCredDef <<<");
+        log.info("createCredentialDefinition <<<");
+    }
+
+    public void createRevocationRegistry() {
+        log.info("createRevocationRegistry >>>");
+
+        String body = JsonPath.parse("{" +
+                "  max_cred_num: 10," +
+                "  credential_definition_id: '" + credDefId + "'," +
+                "  issuance_by_default: true" +
+                "}").jsonString();
+        log.info("Create a new revocation registry:" + prettyJson(body));
+        String response = requestPOST(adminUrl + "/revocation/create-registry", walletName, body);
+        revRegId = JsonPath.read(response, "$.result.revoc_reg_id");
+
+        body = JsonPath.parse("{" +
+                "  tails_public_uri: '" + tailsServerUrl + "/" + revRegId + "'" +
+                "}").jsonString();
+        log.info("Update tails file location of the revocation registry:" + prettyJson(body));
+        response = requestPATCH(adminUrl + "/revocation/registry/" + revRegId, walletName, body);
+
+        log.info("Publish the revocation registry on the ledger:");
+        response = requestPOST(adminUrl + "/revocation/registry/" + revRegId + "/publish", walletName, "{}");
+
+        log.info("Get tails file of the revocation registry:");
+        byte[] tails = requestGETtoBytes(adminUrl + "/revocation/registry/" + revRegId + "/tails-file", walletName);
+
+        log.info("Get genesis file of the revocation registry:");
+        byte[] genesis =  requestGETtoBytes(vonNetworkUrl +"/genesis", "");
+
+        log.info("Put tails file to tails file server:");
+        RequestBody requestBody = new MultipartBody.Builder().setType(MultipartBody.FORM)
+                .addFormDataPart("genesis","genesis.txn",
+                        RequestBody.create(genesis, MediaType.parse("application/octet-stream")))
+                .addFormDataPart("tails", "tails.bin",
+                        RequestBody.create(tails, MediaType.parse("application/octet-stream")))
+                .build();
+        response = requestPUT(tailsServerUrl + "/" + revRegId, requestBody);
+        log.info("response: " + response);
+
+        log.info("createRevocationRegistry <<<");
+    }
+
+    public void acceptRequest(String connectionId) {
+        String response = requestPOST(adminUrl + "/connections/" + connectionId + "/accept-request-with-endpoint", walletName, "{}");
     }
 
     public void sendCredentialOffer(String connectionId) {
@@ -167,7 +223,7 @@ public class GlobalService {
                 "    ]" +
                 "  }" +
                 "}").jsonString();
-        String response = requestPOST(adminUrl + "/issue-credential/send-offer", body);
+        String response = requestPOST(adminUrl + "/issue-credential/send-offer", walletName, body);
     }
 
     public void sendProofRequest(String connectionId) {
@@ -200,7 +256,7 @@ public class GlobalService {
                 "    }" +
                 "  }" +
                 "}").jsonString();
-        String response = requestPOST(adminUrl + "/present-proof/send-request", body);
+        String response = requestPOST(adminUrl + "/present-proof/send-request", walletName, body);
     }
 
     public void printProofResult(String body) {
@@ -219,7 +275,7 @@ public class GlobalService {
         urlBuilder.addQueryParameter("publish", "true");
         String url = urlBuilder.build().toString();
 
-        String response =  requestPOST(url, "{}");
+        String response =  requestPOST(url, walletName, "{}");
     }
 
 }

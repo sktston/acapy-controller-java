@@ -19,6 +19,8 @@ public class GlobalService {
     final String adminUrl = "http://localhost:8031";
     final String faberContUrl = "http://localhost:8022";
 
+    String walletName = "alice.agent";
+
     // check options
     static boolean enableObserveMode = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_OBSERVE_MODE", "false"));
 
@@ -39,7 +41,14 @@ public class GlobalService {
         String state = JsonPath.read(body, "$.state");
         switch(topic) {
             case "connections":
-                log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
+                // When invitation is received, accept invitation
+                if (state.equals("invitation") && !enableObserveMode) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> acceptInvitation");
+                    acceptInvitation(JsonPath.read(body, "$.connection_id"));
+                }
+                else {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
+                }
                 break;
             case "issue_credential":
                 // When credential offer is received, send credential request
@@ -57,6 +66,10 @@ public class GlobalService {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProof");
                     sendProof(body);
                 }
+                else if (state.equals("presentation_acked") && !enableObserveMode) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
+                    log.info("Alice demo is completed (Exit manually)");
+                }
                 else {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
                 }
@@ -72,19 +85,23 @@ public class GlobalService {
 
     public void receiveInvitation() {
         log.info("receiveInvitation >>>");
-        String invitation = requestGET(faberContUrl + "/invitation");
+        String invitation = requestGET(faberContUrl + "/invitation", "");
         log.info("invitation:" + invitation);
-        String response = requestPOST(adminUrl + "/connections/receive-invitation", invitation);
+        String response = requestPOST(adminUrl + "/connections/receive-invitation-with-endpoint", walletName, invitation);
         log.info("receiveInvitation <<<");
     }
 
+    public void acceptInvitation(String connectionId) {
+        String response = requestPOST(adminUrl + "/connections/" + connectionId + "/accept-invitation-with-endpoint", walletName, "{}");
+    }
+
     public void sendCredentialRequest(String credExId) {
-        String response = requestPOST(adminUrl + "/issue-credential/records/" + credExId + "/send-request", "{}");
+        String response = requestPOST(adminUrl + "/issue-credential/records/" + credExId + "/send-request", walletName, "{}");
     }
 
     public void sendProof(String reqBody) {
         String presExId = JsonPath.read(reqBody, "$.presentation_exchange_id");
-        String response = requestGET(adminUrl + "/present-proof/records/" + presExId + "/credentials");
+        String response = requestGET(adminUrl + "/present-proof/records/" + presExId + "/credentials", walletName);
 
         ArrayList<LinkedHashMap<String, Object>> credentials = JsonPath.read(response, "$");
         int credRevId = 0;
@@ -113,7 +130,7 @@ public class GlobalService {
                 .put("$", "requested_predicates", reqPreds)
                 .put("$", "self_attested_attributes", selfAttrs).jsonString();
 
-        response = requestPOST(adminUrl + "/present-proof/records/" + presExId + "/send-presentation", body);
+        response = requestPOST(adminUrl + "/present-proof/records/" + presExId + "/send-presentation", walletName, body);
     }
 
 }

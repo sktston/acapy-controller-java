@@ -26,16 +26,21 @@ public class Common {
         return r.nextInt((max - min) + 1) + min;
     }
 
-    public static String requestGET(String url) {
-        OkHttpClient client = new OkHttpClient.Builder()
-                .writeTimeout(60, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .connectTimeout(60, TimeUnit.SECONDS)
-                .callTimeout(60, TimeUnit.SECONDS)
+    static OkHttpClient getClient(int timeout) {
+        return new OkHttpClient.Builder()
+                .writeTimeout(timeout, TimeUnit.SECONDS)
+                .readTimeout(timeout, TimeUnit.SECONDS)
+                .connectTimeout(timeout, TimeUnit.SECONDS)
+                .callTimeout(timeout, TimeUnit.SECONDS)
                 .build();
+    }
+
+    public static String requestGET(String url, String walletName) {
+        OkHttpClient client = getClient(60);
         Request request = new Request.Builder()
                 .url(url)
                 .get()
+                .addHeader("Wallet", walletName)
                 .build();
         try {
             Response response = client.newCall(request).execute();
@@ -46,16 +51,59 @@ public class Common {
         return null;
     }
 
-    public static String requestPOST(String url, String json) {
-        OkHttpClient client = new OkHttpClient.Builder()
-                .writeTimeout(60, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .connectTimeout(60, TimeUnit.SECONDS)
-                .callTimeout(60, TimeUnit.SECONDS)
-                .build();
+    public static String requestPOST(String url, String walletName, String json) {
+        OkHttpClient client = getClient(60);
         Request request = new Request.Builder()
                 .url(url)
                 .post(RequestBody.create(json, MediaType.parse("application/json")))
+                .addHeader("Wallet", walletName)
+                .build();
+        try {
+            Response response = client.newCall(request).execute();
+            return response.body().string();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static String requestPATCH(String url, String walletName, String json) {
+        OkHttpClient client = getClient(60);
+        Request request = new Request.Builder()
+                .url(url)
+                .patch(RequestBody.create(json, MediaType.parse("application/json")))
+                .addHeader("Wallet", walletName)
+                .build();
+        try {
+            Response response = client.newCall(request).execute();
+            return response.body().string();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static byte[] requestGETtoBytes(String url, String walletName) {
+        OkHttpClient client = getClient(60);
+        Request request = new Request.Builder()
+                .url(url)
+                .get()
+                .addHeader("Wallet", walletName)
+                .build();
+        try {
+            Response response = client.newCall(request).execute();
+            return response.body().bytes();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static String requestPUT(String url, RequestBody body) {
+        OkHttpClient client = getClient(60);
+        Request request = new Request.Builder()
+                .url(url)
+                .put(body)
                 .build();
         try {
             Response response = client.newCall(request).execute();

@@ -1,9 +1,9 @@
 version: '3'
 
 services:
-  acapy-faber-agent:
+  acapy-multi-faber-agent:
     build:
-      context: https://github.com/sktston/aries-cloudagent-python.git
+      context: https://github.com/sktston/aries-cloudagent-python.git#skt-develop
       dockerfile: ./docker/Dockerfile.run
     ports:
       - 8020-8021:8020-8021
@@ -15,18 +15,15 @@ services:
         --admin-insecure-mode
         --webhook-url http://host.docker.internal:8022/webhooks
         --endpoint http://host.docker.internal:8020
-        --tails-server-base-url http://13.124.169.12
         --storage-type indy
         --genesis-url http://54.180.86.51/genesis
-        --inbound-transport http 0.0.0.0 8020
+        --inbound-transport http_custodial 0.0.0.0 8020
         --outbound-transport http
         --label faber.agent
         --seed 000000000000000000000000Steward1
         --wallet-type indy
         --wallet-name faber.agent
         --wallet-key faber.agent.key
-        --auto-accept-invites
-        --auto-accept-requests
         --auto-ping-connection
         --auto-respond-credential-request
         --auto-store-credential
@@ -38,10 +35,11 @@ services:
         --trace-target log
         --trace-tag acapy.events
         --trace-label faber.agent.trace
+        --plugin aries_cloudagent.wallet_handler
 
-  acapy-alice-agent:
+  acapy-multi-alice-agent:
     build:
-      context: https://github.com/sktston/aries-cloudagent-python.git
+      context: https://github.com/sktston/aries-cloudagent-python.git#skt-develop
       dockerfile: ./docker/Dockerfile.run
     ports:
       - 8030-8031:8030-8031
@@ -55,7 +53,7 @@ services:
         --endpoint http://host.docker.internal:8030
         --storage-type indy
         --genesis-url http://54.180.86.51/genesis
-        --inbound-transport http 0.0.0.0 8030
+        --inbound-transport http_custodial 0.0.0.0 8030
         --outbound-transport http
         --label alice.agent
         --seed 000000000000000000000000000User1
@@ -63,8 +61,6 @@ services:
         --wallet-type indy
         --wallet-name alice.agent
         --wallet-key alice.agent.key
-        --auto-accept-invites
-        --auto-accept-requests
         --auto-ping-connection
         --auto-respond-credential-request
         --auto-store-credential
@@ -76,6 +72,7 @@ services:
         --trace-target log
         --trace-tag acapy.events
         --trace-label alice.agent.trace
+        --plugin aries_cloudagent.wallet_handler
 
 networks:
   acapy:
