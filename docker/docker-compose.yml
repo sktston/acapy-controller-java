@@ -24,6 +24,9 @@ services:
         --wallet-type indy
         --wallet-name base.agent
         --wallet-key base.agent.key
+        --wallet-storage-type postgres_storage
+        --wallet-storage-config {\"url\":\"host.docker.internal:5432\"}
+        --wallet-storage-creds {\"account\":\"postgres\",\"password\":\"mysecretpassword\",\"admin_account\":\"postgres\",\"admin_password\":\"mysecretpassword\"}
         --auto-ping-connection
         --auto-respond-credential-request
         --auto-store-credential
@@ -61,6 +64,9 @@ services:
         --wallet-type indy
         --wallet-name alice.agent
         --wallet-key alice.agent.key
+        --wallet-storage-type postgres_storage
+        --wallet-storage-config {\"url\":\"host.docker.internal:5432\"}
+        --wallet-storage-creds {\"account\":\"postgres\",\"password\":\"mysecretpassword\",\"admin_account\":\"postgres\",\"admin_password\":\"mysecretpassword\"}
         --auto-ping-connection
         --auto-respond-credential-request
         --auto-store-credential
@@ -73,6 +79,15 @@ services:
         --trace-tag acapy.events
         --trace-label alice.agent.trace
         --plugin aries_cloudagent.wallet_handler
+
+  postgres:
+    image: postgres
+    environment:
+      - POSTGRES_PASSWORD=mysecretpassword
+    ports:
+      - '5432:5432'
+    networks:
+      - acapy
 
 networks:
   acapy:
