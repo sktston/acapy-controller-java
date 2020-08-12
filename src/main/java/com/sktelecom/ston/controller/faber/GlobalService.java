@@ -35,14 +35,10 @@ public class GlobalService {
 
     // check options
     static boolean enableRevoke = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_REVOKE", "false"));
-    static boolean enableObserveMode = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_OBSERVE_MODE", "false"));
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
         log.info("initializeAfterStartup >>> start");
-
-        if (enableObserveMode)
-            return;
 
         // check wallet already exist
         String response = requestGET(adminUrl + "/wallet", baseWalletName);
@@ -99,12 +95,12 @@ public class GlobalService {
         String state = JsonPath.read(body, "$.state");
         switch(topic) {
             case "connections":
-                if (state.equals("request") && !enableObserveMode) {
+                if (state.equals("request")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> acceptRequest");
                     acceptRequest(JsonPath.read(body, "$.connection_id"));
                 }
                 // When connection with alice is done, send credential offer
-                else if (state.equals("active") && !enableObserveMode) {
+                else if (state.equals("active")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
                     sendCredentialOffer(JsonPath.read(body, "$.connection_id"));
                 }
@@ -114,7 +110,7 @@ public class GlobalService {
                 break;
             case "issue_credential":
                 // When credential is issued and acked, send proof(presentation) request
-                if (state.equals("credential_acked") && !enableObserveMode) {
+                if (state.equals("credential_acked")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProofRequest");
                     if (enableRevoke) {
                         revokeCredential(JsonPath.read(body, "$.revoc_reg_id"), JsonPath.read(body, "$.revocation_id"));
@@ -127,7 +123,7 @@ public class GlobalService {
                 break;
             case "present_proof":
                 // When proof is verified, print the result
-                if (state.equals("verified") && !enableObserveMode) {
+                if (state.equals("verified")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print result");
                     printProofResult(body);
                 }

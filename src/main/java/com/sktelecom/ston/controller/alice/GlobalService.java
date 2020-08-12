@@ -21,16 +21,9 @@ public class GlobalService {
 
     String walletName = "alice.agent";
 
-    // check options
-    static boolean enableObserveMode = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_OBSERVE_MODE", "false"));
-
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
         log.info("initializeAfterStartup >>> start");
-
-        if (enableObserveMode)
-            return;
-
         receiveInvitation();
         log.info("initializeAfterStartup <<< done");
     }
@@ -42,7 +35,7 @@ public class GlobalService {
         switch(topic) {
             case "connections":
                 // When invitation is received, accept invitation
-                if (state.equals("invitation") && !enableObserveMode) {
+                if (state.equals("invitation")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> acceptInvitation");
                     acceptInvitation(JsonPath.read(body, "$.connection_id"));
                 }
@@ -52,7 +45,7 @@ public class GlobalService {
                 break;
             case "issue_credential":
                 // When credential offer is received, send credential request
-                if (state.equals("offer_received") && !enableObserveMode) {
+                if (state.equals("offer_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequest");
                     sendCredentialRequest(JsonPath.read(body, "$.credential_exchange_id"));
                 }
@@ -62,11 +55,11 @@ public class GlobalService {
                 break;
             case "present_proof":
                 // When proof request is received, send proof(presentation)
-                if (state.equals("request_received") && !enableObserveMode) {
+                if (state.equals("request_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProof");
                     sendProof(body);
                 }
-                else if (state.equals("presentation_acked") && !enableObserveMode) {
+                else if (state.equals("presentation_acked")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
                     log.info("Alice demo is completed (Exit manually)");
                 }
