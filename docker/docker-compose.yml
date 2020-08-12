@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  acapy-multi-faber-agent:
+  acapy-multi-base-agent:
     build:
       context: https://github.com/sktston/aries-cloudagent-python.git#skt-develop
       dockerfile: ./docker/Dockerfile.run
@@ -19,11 +19,11 @@ services:
         --genesis-url http://54.180.86.51/genesis
         --inbound-transport http_custodial 0.0.0.0 8020
         --outbound-transport http
-        --label faber.agent
+        --label base.agent
         --seed 000000000000000000000000Steward1
         --wallet-type indy
-        --wallet-name faber.agent
-        --wallet-key faber.agent.key
+        --wallet-name base.agent
+        --wallet-key base.agent.key
         --auto-ping-connection
         --auto-respond-credential-request
         --auto-store-credential
@@ -34,7 +34,7 @@ services:
         --trace
         --trace-target log
         --trace-tag acapy.events
-        --trace-label faber.agent.trace
+        --trace-label base.agent.trace
         --plugin aries_cloudagent.wallet_handler
 
   acapy-multi-alice-agent:

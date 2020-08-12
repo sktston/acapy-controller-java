@@ -11,7 +11,6 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
@@ -30,7 +29,9 @@ public class GlobalService {
     String schemaId; // schema identifier
     String credDefId; // credential definition identifier
     String revRegId; // revocation registry identifier
-    String walletName = "faber.agent";
+    String baseWalletName = "base.agent";
+    String faberWalletName = "faber.agent";
+    String faberSeed = "00000000000000000000000Endorser1";
 
     // check options
     static boolean enableRevoke = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_REVOKE", "false"));
@@ -40,12 +41,23 @@ public class GlobalService {
     public void initializeAfterStartup() {
         log.info("initializeAfterStartup >>> start");
 
-        if(enableObserveMode)
+        if (enableObserveMode)
             return;
 
-        String response = requestGET(adminUrl + "/credential-definitions/created", walletName);
-        ArrayList<String> credDefIds = JsonPath.read(response, "$.credential_definition_ids");
+        // check wallet already exist
+        String response = requestGET(adminUrl + "/wallet", baseWalletName);
+        ArrayList<String> walletList = JsonPath.read(response, "$.result");
+        if (!walletList.contains(faberWalletName)) {
+            log.info("Agent does not have wallet " + faberWalletName + " -> Create wallet and did");
+            createWalletAndDid();
+        }
+        else {
+            log.info("Agent already have wallet " + faberWalletName + " -> Use it");
+        }
 
+        // check credential definition already exist
+        response = requestGET(adminUrl + "/credential-definitions/created", faberWalletName);
+        ArrayList<String> credDefIds = JsonPath.read(response, "$.credential_definition_ids");
         if (credDefIds.size() == 0) {
             log.info("Agent does not have credential definition -> Create it");
             version = getRandomInt(1, 99) + "." + getRandomInt(1, 99) + "." + getRandomInt(1, 99);
@@ -67,7 +79,7 @@ public class GlobalService {
 
     public String createInvitation() {
         log.info("createInvitation >>>");
-        String response = requestPOST(adminUrl + "/connections/invite-with-endpoint", walletName, "{}");
+        String response = requestPOST(adminUrl + "/connections/invite-with-endpoint", faberWalletName, "{}");
         String invitation = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation")).jsonString();
         log.info("createInvitation <<< invitation:" + invitation);
         return invitation;
@@ -75,7 +87,7 @@ public class GlobalService {
 
     public String createInvitationUrl() {
         log.info("createInvitationUrl >>>");
-        String response = requestPOST(adminUrl + "/connections/invite-with-endpoint", walletName, "{}");
+        String response = requestPOST(adminUrl + "/connections/invite-with-endpoint", faberWalletName, "{}");
         String invitationUrl = JsonPath.read(response, "$.invitation_url");
         log.info("createInvitationUrl <<< invitationUrl:" + invitationUrl);
         return invitationUrl;
@@ -135,6 +147,39 @@ public class GlobalService {
         }
     }
 
+    public void createWalletAndDid() {
+        log.info("createWalletAndDid >>>");
+
+        String body = JsonPath.parse("{" +
+                "  wallet_name: '" + faberWalletName + "'," +
+                "  wallet_key: '" + faberWalletName + ".key'," +
+                "  wallet_type: indy" +
+                "}").jsonString();
+        log.info("Create a new wallet:" + prettyJson(body));
+        String response = requestPOST(adminUrl + "/wallet", baseWalletName, body);
+
+        body = JsonPath.parse("{ seed: '" + faberSeed + "'}").jsonString();
+        log.info("Create a new local did:" + prettyJson(body));
+        response = requestPOST(adminUrl + "/wallet/did/create", faberWalletName, body);
+        String did = JsonPath.read(response, "$.result.did");
+        String verkey = JsonPath.read(response, "$.result.verkey");
+        log.info("created did: " + did + ", verkey: " + verkey);
+
+        body = JsonPath.parse("{" +
+                "  seed: '" + faberSeed + "'," +
+                "  alias: '" + faberWalletName + "'," +
+                "  role: 'ENDORSER'" +
+                "}").jsonString();
+        log.info("Register the did to the ledger as a ENDORSER:" + prettyJson(body));
+        response = requestPOST(vonNetworkUrl + "/register", "", body);
+
+        log.info("Assign the did to public: " + did);
+        response = requestPOST(adminUrl + "/wallet/did/public?did=" + did, faberWalletName, "{}");
+        log.info("response: " + response);
+
+        log.info("createWalletAndDid <<<");
+    }
+
     public void createSchema() {
         log.info("createSchema >>>");
 
@@ -144,7 +189,7 @@ public class GlobalService {
                 "  attributes: ['name', 'date', 'degree', 'age']" +
                 "}").jsonString();
         log.info("Create a new schema on the ledger:" + prettyJson(body));
-        String response = requestPOST(adminUrl + "/schemas", walletName, body);
+        String response = requestPOST(adminUrl + "/schemas", faberWalletName, body);
         schemaId = JsonPath.read(response, "$.schema_id");
 
         log.info("createSchema <<<");
@@ -159,7 +204,7 @@ public class GlobalService {
                 "  support_revocation: true" +
                 "}").jsonString();
         log.info("Create a new credential definition on the ledger:" + prettyJson(body));
-        String response = requestPOST(adminUrl + "/credential-definitions", walletName, body);
+        String response = requestPOST(adminUrl + "/credential-definitions", faberWalletName, body);
         credDefId = JsonPath.read(response, "$.credential_definition_id");
 
         log.info("createCredentialDefinition <<<");
@@ -174,20 +219,20 @@ public class GlobalService {
                 "  issuance_by_default: true" +
                 "}").jsonString();
         log.info("Create a new revocation registry:" + prettyJson(body));
-        String response = requestPOST(adminUrl + "/revocation/create-registry", walletName, body);
+        String response = requestPOST(adminUrl + "/revocation/create-registry", faberWalletName, body);
         revRegId = JsonPath.read(response, "$.result.revoc_reg_id");
 
         body = JsonPath.parse("{" +
                 "  tails_public_uri: '" + tailsServerUrl + "/" + revRegId + "'" +
                 "}").jsonString();
         log.info("Update tails file location of the revocation registry:" + prettyJson(body));
-        response = requestPATCH(adminUrl + "/revocation/registry/" + revRegId, walletName, body);
+        response = requestPATCH(adminUrl + "/revocation/registry/" + revRegId, faberWalletName, body);
 
         log.info("Publish the revocation registry on the ledger:");
-        response = requestPOST(adminUrl + "/revocation/registry/" + revRegId + "/publish", walletName, "{}");
+        response = requestPOST(adminUrl + "/revocation/registry/" + revRegId + "/publish", faberWalletName, "{}");
 
         log.info("Get tails file of the revocation registry:");
-        byte[] tails = requestGETtoBytes(adminUrl + "/revocation/registry/" + revRegId + "/tails-file", walletName);
+        byte[] tails = requestGETtoBytes(adminUrl + "/revocation/registry/" + revRegId + "/tails-file", faberWalletName);
 
         log.info("Get genesis file of the revocation registry:");
         byte[] genesis =  requestGETtoBytes(vonNetworkUrl +"/genesis", "");
@@ -206,7 +251,7 @@ public class GlobalService {
     }
 
     public void acceptRequest(String connectionId) {
-        String response = requestPOST(adminUrl + "/connections/" + connectionId + "/accept-request-with-endpoint", walletName, "{}");
+        String response = requestPOST(adminUrl + "/connections/" + connectionId + "/accept-request-with-endpoint", faberWalletName, "{}");
     }
 
     public void sendCredentialOffer(String connectionId) {
@@ -223,7 +268,7 @@ public class GlobalService {
                 "    ]" +
                 "  }" +
                 "}").jsonString();
-        String response = requestPOST(adminUrl + "/issue-credential/send-offer", walletName, body);
+        String response = requestPOST(adminUrl + "/issue-credential/send-offer", faberWalletName, body);
     }
 
     public void sendProofRequest(String connectionId) {
@@ -256,7 +301,7 @@ public class GlobalService {
                 "    }" +
                 "  }" +
                 "}").jsonString();
-        String response = requestPOST(adminUrl + "/present-proof/send-request", walletName, body);
+        String response = requestPOST(adminUrl + "/present-proof/send-request", faberWalletName, body);
     }
 
     public void printProofResult(String body) {
@@ -275,7 +320,7 @@ public class GlobalService {
         urlBuilder.addQueryParameter("publish", "true");
         String url = urlBuilder.build().toString();
 
-        String response =  requestPOST(url, walletName, "{}");
+        String response =  requestPOST(url, faberWalletName, "{}");
     }
 
 }

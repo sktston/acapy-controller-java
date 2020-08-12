@@ -28,7 +28,7 @@ public class GlobalService {
     public void initializeAfterStartup() {
         log.info("initializeAfterStartup >>> start");
 
-        if(enableObserveMode)
+        if (enableObserveMode)
             return;
 
         receiveInvitation();
