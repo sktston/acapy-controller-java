@@ -9,36 +9,38 @@ services:
       - 8020-8021:8020-8021
     networks:
       - acapy
-    command: >
-      start
-        --admin 0.0.0.0 8021
-        --admin-insecure-mode
-        --webhook-url http://host.docker.internal:8022/webhooks
-        --endpoint http://host.docker.internal:8020
-        --storage-type indy
-        --genesis-url http://54.180.86.51/genesis
-        --inbound-transport http_custodial 0.0.0.0 8020
-        --outbound-transport http
-        --label base.agent
-        --seed 000000000000000000000000Steward1
-        --wallet-type indy
-        --wallet-name base.agent
-        --wallet-key base.agent.key
-        --wallet-storage-type postgres_storage
-        --wallet-storage-config {\"url\":\"host.docker.internal:5432\",\"wallet_scheme\":\"MultiWalletSingleTableSharedPool\"}
-        --wallet-storage-creds {\"account\":\"postgres\",\"password\":\"mysecretpassword\",\"admin_account\":\"postgres\",\"admin_password\":\"mysecretpassword\"}
-        --auto-ping-connection
-        --auto-respond-credential-request
-        --auto-store-credential
-        --auto-verify-presentation
-        --auto-respond-messages
-        --preserve-exchange-records
-        --log-level info
-        --trace
-        --trace-target log
-        --trace-tag acapy.events
-        --trace-label base.agent.trace
-        --plugin aries_cloudagent.wallet_handler
+    depends_on:
+      - postgres
+    entrypoint: ["./wait-for-it.sh", "postgres:5432", "--", "aca-py",
+      "start",
+      "--admin", "0.0.0.0", "8021",
+      "--admin-insecure-mode",
+      "--webhook-url", "http://host.docker.internal:8022/webhooks",
+      "--endpoint", "http://host.docker.internal:8020",
+      "--storage-type", "indy",
+      "--genesis-url", "http://54.180.86.51/genesis",
+      "--inbound-transport", "http_custodial", "0.0.0.0", "8020",
+      "--outbound-transport", "http",
+      "--label", "base.agent",
+      "--seed", "000000000000000000000000Steward1",
+      "--wallet-type", "indy",
+      "--wallet-name", "base.agent",
+      "--wallet-key", "base.agent.key",
+      "--wallet-storage-type", "postgres_storage",
+      "--wallet-storage-config", "{\"url\":\"postgres:5432\",\"wallet_scheme\":\"MultiWalletSingleTableSharedPool\"}",
+      "--wallet-storage-creds", "{\"account\":\"postgres\",\"password\":\"mysecretpassword\",\"admin_account\":\"postgres\",\"admin_password\":\"mysecretpassword\"}",
+      "--auto-ping-connection",
+      "--auto-respond-credential-request",
+      "--auto-store-credential",
+      "--auto-verify-presentation",
+      "--auto-respond-messages",
+      "--preserve-exchange-records",
+      "--log-level", "info",
+      "--trace",
+      "--trace-target", "log",
+      "--trace-tag", "acapy.events",
+      "--trace-label", "base.agent.trace",
+      "--plugin", "aries_cloudagent.wallet_handler"]
 
   acapy-multi-alice-agent:
     build:
@@ -48,37 +50,39 @@ services:
       - 8030-8031:8030-8031
     networks:
       - acapy
-    command: >
-      start
-        --admin 0.0.0.0 8031
-        --admin-insecure-mode
-        --webhook-url http://host.docker.internal:8032/webhooks
-        --endpoint http://host.docker.internal:8030
-        --storage-type indy
-        --genesis-url http://54.180.86.51/genesis
-        --inbound-transport http_custodial 0.0.0.0 8030
-        --outbound-transport http
-        --label alice.agent
-        --seed 000000000000000000000000000User1
-        --wallet-local-did
-        --wallet-type indy
-        --wallet-name alice.agent
-        --wallet-key alice.agent.key
-        --wallet-storage-type postgres_storage
-        --wallet-storage-config {\"url\":\"host.docker.internal:5432\",\"wallet_scheme\":\"MultiWalletSingleTableSharedPool\"}
-        --wallet-storage-creds {\"account\":\"postgres\",\"password\":\"mysecretpassword\",\"admin_account\":\"postgres\",\"admin_password\":\"mysecretpassword\"}
-        --auto-ping-connection
-        --auto-respond-credential-request
-        --auto-store-credential
-        --auto-verify-presentation
-        --auto-respond-messages
-        --preserve-exchange-records
-        --log-level info
-        --trace
-        --trace-target log
-        --trace-tag acapy.events
-        --trace-label alice.agent.trace
-        --plugin aries_cloudagent.wallet_handler
+    depends_on:
+      - postgres
+    entrypoint: ["./wait-for-it.sh", "postgres:5432", "--", "aca-py",
+      "start",
+      "--admin", "0.0.0.0", "8031",
+      "--admin-insecure-mode",
+      "--webhook-url", "http://host.docker.internal:8032/webhooks",
+      "--endpoint", "http://host.docker.internal:8030",
+      "--storage-type", "indy",
+      "--genesis-url", "http://54.180.86.51/genesis",
+      "--inbound-transport", "http_custodial", "0.0.0.0", "8030",
+      "--outbound-transport", "http",
+      "--label", "alice.agent",
+      "--seed", "000000000000000000000000000User1",
+      "--wallet-local-did",
+      "--wallet-type", "indy",
+      "--wallet-name", "alice.agent",
+      "--wallet-key", "alice.agent.key",
+      "--wallet-storage-type", "postgres_storage",
+      "--wallet-storage-config", "{\"url\":\"postgres:5432\"}",
+      "--wallet-storage-creds", "{\"account\":\"postgres\",\"password\":\"mysecretpassword\",\"admin_account\":\"postgres\",\"admin_password\":\"mysecretpassword\"}",
+      "--auto-ping-connection",
+      "--auto-respond-credential-request",
+      "--auto-store-credential",
+      "--auto-verify-presentation",
+      "--auto-respond-messages",
+      "--preserve-exchange-records",
+      "--log-level", "info",
+      "--trace",
+      "--trace-target", "log",
+      "--trace-tag", "acapy.events",
+      "--trace-label", "alice.agent.trace",
+      "--plugin", "aries_cloudagent.wallet_handler"]
 
   postgres:
     image: postgres
