@@ -25,7 +25,7 @@ services:
         --wallet-name base.agent
         --wallet-key base.agent.key
         --wallet-storage-type postgres_storage
-        --wallet-storage-config {\"url\":\"host.docker.internal:5432\"}
+        --wallet-storage-config {\"url\":\"host.docker.internal:5432\",\"wallet_scheme\":\"MultiWalletSingleTableSharedPool\"}
         --wallet-storage-creds {\"account\":\"postgres\",\"password\":\"mysecretpassword\",\"admin_account\":\"postgres\",\"admin_password\":\"mysecretpassword\"}
         --auto-ping-connection
         --auto-respond-credential-request
@@ -65,7 +65,7 @@ services:
         --wallet-name alice.agent
         --wallet-key alice.agent.key
         --wallet-storage-type postgres_storage
-        --wallet-storage-config {\"url\":\"host.docker.internal:5432\"}
+        --wallet-storage-config {\"url\":\"host.docker.internal:5432\",\"wallet_scheme\":\"MultiWalletSingleTableSharedPool\"}
         --wallet-storage-creds {\"account\":\"postgres\",\"password\":\"mysecretpassword\",\"admin_account\":\"postgres\",\"admin_password\":\"mysecretpassword\"}
         --auto-ping-connection
         --auto-respond-credential-request
