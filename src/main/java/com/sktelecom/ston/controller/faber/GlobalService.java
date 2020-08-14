@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import static com.sktelecom.ston.controller.utils.Common.*;
@@ -90,10 +91,11 @@ public class GlobalService {
         return invitationUrl;
     }
 
-    public void handleMessage(String topic, String body) {
-        log.info("handleMessage >>> topic:" + topic + ", body:" + body);
-
+    public void handleMessage(Map<String, String> headers, String topic, String body) {
+        String wallet = headers.get("Wallet");
         String state = JsonPath.read(body, "$.state");
+        log.info("handleMessage >>> wallet:" + wallet + ", topic:" + topic + ", body:" + body);
+
         switch(topic) {
             case "connections":
                 if (state.equals("request")) {

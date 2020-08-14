@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RequiredArgsConstructor
 @Slf4j
 @RestController
@@ -26,9 +28,10 @@ public class GlobalController {
 
     @PostMapping("/webhooks/topic/{topic}/")
     public ResponseEntity webhooksTopicHandler(
+            @RequestHeader Map<String, String> headers,
             @PathVariable String topic,
             @RequestBody String body) {
-        globalService.handleMessage(topic, body);
+        globalService.handleMessage(headers, topic, body);
         return ResponseEntity.ok().build();
     }
 
