@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.UUID;
 
 import static com.sktelecom.ston.controller.utils.Common.*;
 import static com.sktelecom.ston.controller.utils.Common.requestGET;
@@ -29,9 +30,9 @@ public class GlobalService {
     String schemaId; // schema identifier
     String credDefId; // credential definition identifier
     String revRegId; // revocation registry identifier
-    String baseWalletName = "base.agent";
-    String faberWalletName = "faber.agent";
-    String faberSeed = "00000000000000000000000Endorser1";
+    String baseWalletName = "base.agent"; // walletName when aca-py starts
+    String faberWalletName = "faber.agent"; // new walletName faber uses
+    String faberSeed = UUID.randomUUID().toString().replaceAll("-", ""); // random seed 32 characters
 
     // check options
     static boolean enableRevoke = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_REVOKE", "false"));
@@ -161,16 +162,17 @@ public class GlobalService {
         String verkey = JsonPath.read(response, "$.result.verkey");
         log.info("created did: " + did + ", verkey: " + verkey);
 
-        body = JsonPath.parse("{" +
-                "  seed: '" + faberSeed + "'," +
-                "  alias: '" + faberWalletName + "'," +
-                "  role: 'ENDORSER'" +
-                "}").jsonString();
-        log.info("Register the did to the ledger as a ENDORSER:" + prettyJson(body));
-        response = requestPOST(vonNetworkUrl + "/register", "", body);
+        String params = "?did=" + did +
+                "&verkey=" + verkey +
+                "&alias=" + faberWalletName +
+                "&role=ENDORSER";
+        log.info("Register the did to the ledger as a ENDORSER");
+        // baseWallet's DID must have STEWARD role
+        response = requestPOST(adminUrl + "/ledger/register-nym" + params, baseWalletName, "{}");
 
+        params = "?did=" + did;
         log.info("Assign the did to public: " + did);
-        response = requestPOST(adminUrl + "/wallet/did/public?did=" + did, faberWalletName, "{}");
+        response = requestPOST(adminUrl + "/wallet/did/public" + params, faberWalletName, "{}");
         log.info("response: " + response);
 
         log.info("createWalletAndDid <<<");
