@@ -270,6 +270,7 @@ public class GlobalService {
     }
 
     public void sendProofRequest(String connectionId) {
+        long curUnixTime = System.currentTimeMillis() / 1000L;
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId + "'," +
                 "  proof_request: {" +
@@ -296,7 +297,8 @@ public class GlobalService {
                 "        p_value: 20," +
                 "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
                 "      }" +
-                "    }" +
+                "    }," +
+                "    non_revoked: { to: " + curUnixTime + " }" +
                 "  }" +
                 "}").jsonString();
         String response = requestPOST(adminUrl + "/present-proof/send-request", faberWalletName, body);
