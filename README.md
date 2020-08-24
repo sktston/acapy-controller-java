@@ -12,6 +12,8 @@ Check admin (swagger API) http://localhost:8021
 Alice agent opens 8030 port (endpoint) and 8031 port (admin). \
 Check admin http://localhost:8031
 
+`docker-compose up --build` is fully recommended if you pull a repository recently.
+
 - Run Faber Controller
 ```
 ./gradlew faber
@@ -37,6 +39,11 @@ You can see below log at faber side when demo completes
 ```
 [INFO ] [GlobalService.java]printProofResult(200) :   - Proof validation:false
 ```
+
+- Change ledger
+
+Open `docker/docker-compose.yml` \
+Edit the value of `--genesis-transactions`
 
 - Access faber from non-docker agent
 
