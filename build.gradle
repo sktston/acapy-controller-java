@@ -6,8 +6,8 @@ plugins {
 
 group 'com.sktelecom.ston'
 version '0.5.3'
-sourceCompatibility = '14'
-targetCompatibility = '14'
+sourceCompatibility = '11'
+targetCompatibility = '11'
 configurations {
     compileOnly {
         extendsFrom annotationProcessor
