@@ -24,13 +24,10 @@ import static com.sktelecom.ston.controller.utils.Common.requestGET;
 @Slf4j
 public class GlobalService {
     final String adminUrl = "http://localhost:8021";
-    final String vonNetworkUrl = "http://54.180.86.51";
-    final String tailsServerUrl = "http://13.124.169.12";
 
     String version; // version for schemaId and credDefId
     String schemaId; // schema identifier
     String credDefId; // credential definition identifier
-    String revRegId; // revocation registry identifier
     String baseWalletName = "base.agent"; // walletName when aca-py starts
     String faberWalletName = "faber.agent"; // new walletName faber uses
     String faberSeed = UUID.randomUUID().toString().replaceAll("-", ""); // random seed 32 characters
@@ -61,7 +58,6 @@ public class GlobalService {
             version = getRandomInt(1, 99) + "." + getRandomInt(1, 99) + "." + getRandomInt(1, 99);
             createSchema();
             createCredentialDefinition();
-            createRevocationRegistry();
         }
         else {
             log.info("Agent has credential definitions -> Use first one");
@@ -201,53 +197,14 @@ public class GlobalService {
         String body = JsonPath.parse("{" +
                 "  schema_id: '" + schemaId + "'," +
                 "  tag: 'tag." + version + "'," +
-                "  support_revocation: true" +
+                "  support_revocation: true," +
+                "  revocation_registry_size: 10" +
                 "}").jsonString();
         log.info("Create a new credential definition on the ledger:" + prettyJson(body));
         String response = requestPOST(adminUrl + "/credential-definitions", faberWalletName, body);
         credDefId = JsonPath.read(response, "$.credential_definition_id");
 
         log.info("createCredentialDefinition <<<");
-    }
-
-    public void createRevocationRegistry() {
-        log.info("createRevocationRegistry >>>");
-
-        String body = JsonPath.parse("{" +
-                "  max_cred_num: 10," +
-                "  credential_definition_id: '" + credDefId + "'," +
-                "  issuance_by_default: true" +
-                "}").jsonString();
-        log.info("Create a new revocation registry:" + prettyJson(body));
-        String response = requestPOST(adminUrl + "/revocation/create-registry", faberWalletName, body);
-        revRegId = JsonPath.read(response, "$.result.revoc_reg_id");
-
-        body = JsonPath.parse("{" +
-                "  tails_public_uri: '" + tailsServerUrl + "/" + revRegId + "'" +
-                "}").jsonString();
-        log.info("Update tails file location of the revocation registry:" + prettyJson(body));
-        response = requestPATCH(adminUrl + "/revocation/registry/" + revRegId, faberWalletName, body);
-
-        log.info("Publish the revocation registry on the ledger:");
-        response = requestPOST(adminUrl + "/revocation/registry/" + revRegId + "/publish", faberWalletName, "{}");
-
-        log.info("Get tails file of the revocation registry:");
-        byte[] tails = requestGETtoBytes(adminUrl + "/revocation/registry/" + revRegId + "/tails-file", faberWalletName);
-
-        log.info("Get genesis file of the revocation registry:");
-        byte[] genesis =  requestGETtoBytes(vonNetworkUrl +"/genesis", "");
-
-        log.info("Put tails file to tails file server:");
-        RequestBody requestBody = new MultipartBody.Builder().setType(MultipartBody.FORM)
-                .addFormDataPart("genesis","genesis.txn",
-                        RequestBody.create(genesis, MediaType.parse("application/octet-stream")))
-                .addFormDataPart("tails", "tails.bin",
-                        RequestBody.create(tails, MediaType.parse("application/octet-stream")))
-                .build();
-        response = requestPUT(tailsServerUrl + "/" + revRegId, requestBody);
-        log.info("response: " + response);
-
-        log.info("createRevocationRegistry <<<");
     }
 
     public void acceptRequest(String connectionId) {
