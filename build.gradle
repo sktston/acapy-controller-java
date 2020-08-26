@@ -46,28 +46,9 @@ task faber_revoke(type:JavaExec) {
     args(['--spring.config.location=classpath:/application-faber.properties'])
     environment("ENABLE_REVOKE", "true")
 }
-task faber_observe(type:JavaExec) {
-    group 'application'
-    classpath sourceSets.main.runtimeClasspath
-    main = 'com.sktelecom.ston.controller.faber.Application'
-    args(['--spring.config.location=classpath:/application-faber.properties'])
-    environment("ENABLE_OBSERVE_MODE", "true")
-}
 task alice(type:JavaExec) {
     group 'application'
     classpath sourceSets.main.runtimeClasspath
     main = 'com.sktelecom.ston.controller.alice.Application'
     args(['--spring.config.location=classpath:/application-alice.properties'])
 }
-task alice_observe(type:JavaExec) {
-    group 'application'
-    classpath sourceSets.main.runtimeClasspath
-    main = 'com.sktelecom.ston.controller.alice.Application'
-    args(['--spring.config.location=classpath:/application-alice.properties'])
-    environment("ENABLE_OBSERVE_MODE", "true")
-}
-
-
-
-
-

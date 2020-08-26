@@ -19,16 +19,9 @@ public class GlobalService {
     final String adminUrl = "http://localhost:8031";
     final String faberContUrl = "http://localhost:8022";
 
-    // check options
-    static boolean enableObserveMode = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_OBSERVE_MODE", "false"));
-
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
         log.info("initializeAfterStartup >>> start");
-
-        if(enableObserveMode)
-            return;
-
         receiveInvitation();
         log.info("initializeAfterStartup <<< done");
     }
@@ -43,7 +36,7 @@ public class GlobalService {
                 break;
             case "issue_credential":
                 // When credential offer is received, send credential request
-                if (state.equals("offer_received") && !enableObserveMode) {
+                if (state.equals("offer_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequest");
                     sendCredentialRequest(JsonPath.read(body, "$.credential_exchange_id"));
                 }
@@ -53,7 +46,7 @@ public class GlobalService {
                 break;
             case "present_proof":
                 // When proof request is received, send proof(presentation)
-                if (state.equals("request_received") && !enableObserveMode) {
+                if (state.equals("request_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProof");
                     sendProof(body);
                 }

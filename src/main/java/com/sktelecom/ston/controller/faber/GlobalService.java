@@ -26,14 +26,10 @@ public class GlobalService {
 
     // check options
     static boolean enableRevoke = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_REVOKE", "false"));
-    static boolean enableObserveMode = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_OBSERVE_MODE", "false"));
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
         log.info("initializeAfterStartup >>> start");
-
-        if(enableObserveMode)
-            return;
 
         String response = requestGET(adminUrl + "/credential-definitions/created");
         ArrayList<String> credDefIds = JsonPath.read(response, "$.credential_definition_ids");
@@ -79,7 +75,7 @@ public class GlobalService {
         switch(topic) {
             case "connections":
                 // When connection with alice is done, send credential offer
-                if (state.equals("active") && !enableObserveMode) {
+                if (state.equals("active")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
                     sendCredentialOffer(JsonPath.read(body, "$.connection_id"));
                 }
@@ -89,7 +85,7 @@ public class GlobalService {
                 break;
             case "issue_credential":
                 // When credential is issued and acked, send proof(presentation) request
-                if (state.equals("credential_acked") && !enableObserveMode) {
+                if (state.equals("credential_acked")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProofRequest");
                     if (enableRevoke) {
                         revokeCredential(JsonPath.read(body, "$.revoc_reg_id"), JsonPath.read(body, "$.revocation_id"));
@@ -102,7 +98,7 @@ public class GlobalService {
                 break;
             case "present_proof":
                 // When proof is verified, print the result
-                if (state.equals("verified") && !enableObserveMode) {
+                if (state.equals("verified")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print result");
                     printProofResult(body);
                 }
