@@ -144,7 +144,7 @@ public class GlobalService {
                 "  schema_id: '" + schemaId + "'," +
                 "  tag: 'tag." + version + "'," +
                 "  support_revocation: true," +
-                "  revocation_registry_size: 50" +
+                "  revocation_registry_size: 10" +
                 "}").jsonString();
         log.info("Create a new credential definition on the ledger:" + prettyJson(body));
         String response = requestPOST(adminUrl + "/credential-definitions", body);
