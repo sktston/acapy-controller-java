@@ -36,14 +36,7 @@ public class GlobalService {
 
         switch(topic) {
             case "connections":
-                // When invitation is received, accept invitation
-                if (state.equals("invitation")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> acceptInvitation");
-                    acceptInvitation(JsonPath.read(body, "$.connection_id"));
-                }
-                else {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
-                }
+                log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
                 break;
             case "issue_credential":
                 // When credential offer is received, send credential request
@@ -82,12 +75,8 @@ public class GlobalService {
         log.info("receiveInvitation >>>");
         String invitation = requestGET(faberContUrl + "/invitation", "");
         log.info("invitation:" + invitation);
-        String response = requestPOST(adminUrl + "/connections/receive-invitation-with-endpoint", walletName, invitation);
+        String response = requestPOST(adminUrl + "/connections/receive-invitation", walletName, invitation);
         log.info("receiveInvitation <<<");
-    }
-
-    public void acceptInvitation(String connectionId) {
-        String response = requestPOST(adminUrl + "/connections/" + connectionId + "/accept-invitation-with-endpoint", walletName, "{}");
     }
 
     public void sendCredentialRequest(String credExId) {

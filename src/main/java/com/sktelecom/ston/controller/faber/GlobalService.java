@@ -73,7 +73,7 @@ public class GlobalService {
 
     public String createInvitation() {
         log.info("createInvitation >>>");
-        String response = requestPOST(adminUrl + "/connections/invite-with-endpoint", faberWalletName, "{}");
+        String response = requestPOST(adminUrl + "/connections/create-invitation", faberWalletName, "{}");
         String invitation = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation")).jsonString();
         log.info("createInvitation <<< invitation:" + invitation);
         return invitation;
@@ -81,7 +81,7 @@ public class GlobalService {
 
     public String createInvitationUrl() {
         log.info("createInvitationUrl >>>");
-        String response = requestPOST(adminUrl + "/connections/invite-with-endpoint", faberWalletName, "{}");
+        String response = requestPOST(adminUrl + "/connections/create-invitation", faberWalletName, "{}");
         String invitationUrl = JsonPath.read(response, "$.invitation_url");
         log.info("createInvitationUrl <<< invitationUrl:" + invitationUrl);
         return invitationUrl;
@@ -94,12 +94,8 @@ public class GlobalService {
 
         switch(topic) {
             case "connections":
-                if (state.equals("request")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> acceptRequest");
-                    acceptRequest(JsonPath.read(body, "$.connection_id"));
-                }
                 // When connection with alice is done, send credential offer
-                else if (state.equals("active")) {
+                if (state.equals("active")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
                     sendCredentialOffer(JsonPath.read(body, "$.connection_id"));
                 }
@@ -205,10 +201,6 @@ public class GlobalService {
         credDefId = JsonPath.read(response, "$.credential_definition_id");
 
         log.info("createCredentialDefinition <<<");
-    }
-
-    public void acceptRequest(String connectionId) {
-        String response = requestPOST(adminUrl + "/connections/" + connectionId + "/accept-request-with-endpoint", faberWalletName, "{}");
     }
 
     public void sendCredentialOffer(String connectionId) {
