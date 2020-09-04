@@ -119,6 +119,10 @@ public class GlobalService {
             case "revocation_registry":
                 log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
                 break;
+            case "problem_report":
+                log.warn("- Case (topic:" + topic + ", state:" + state + ") -> Print body");
+                log.info("  - body:" + prettyJson(body));
+                break;
             default:
                 log.warn("- Warning Unexpected topic:" + topic);
         }

@@ -85,6 +85,10 @@ public class GlobalService {
                 log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print message");
                 log.info("  - message:" + JsonPath.read(body, "$.content"));
                 break;
+            case "problem_report":
+                log.warn("- Case (topic:" + topic + ", state:" + state + ") -> Print body");
+                log.info("  - body:" + prettyJson(body));
+                break;
             default:
                 log.warn("- Warning Unexpected topic:" + topic);
         }
