@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  acapy-multi-base-agent:
+  acapy-agent:
     build:
       context: https://github.com/sktston/aries-cloudagent-python.git#develop
       dockerfile: ./docker/Dockerfile.run
@@ -15,18 +15,17 @@ services:
                  "start",
                  "--admin", "0.0.0.0", "8021",
                  "--admin-insecure-mode",
-                 "--webhook-url", "http://host.docker.internal:8022/webhooks",
                  "--endpoint", "http://host.docker.internal:8020",
                  "--tails-server-base-url", "http://13.124.169.12",
                  "--storage-type", "indy",
                  "--genesis-transactions", "{\"reqSignature\":{},\"txn\":{\"data\":{\"data\":{\"alias\":\"Node1\",\"blskey\":\"4N8aUNHSgjQVgkpm8nhNEfDf6txHznoYREg9kirmJrkivgL4oSEimFF6nsQ6M41QvhM2Z33nves5vfSn9n1UwNFJBYtWVnHYMATn76vLuL3zU88KyeAYcHfsih3He6UHcXDxcaecHVz6jhCYz1P2UZn2bDVruL5wXpehgBfBaLKm3Ba\",\"blskey_pop\":\"RahHYiCvoNCtPTrVtP7nMC5eTYrsUA8WjXbdhNc8debh1agE9bGiJxWBXYNFbnJXoXhWFMvyqhqhRoq737YQemH5ik9oL7R4NTTCz2LEZhkgLJzB3QRQqJyBNyv7acbdHrAT8nQ9UkLbaVL9NBpnWXBTw4LEMePaSHEw66RzPNdAX1\",\"client_ip\":\"54.180.86.51\",\"client_port\":9702,\"node_ip\":\"54.180.86.51\",\"node_port\":9701,\"services\":[\"VALIDATOR\"]},\"dest\":\"Gw6pDLhcBcoQesN72qfotTgFa7cbuqZpkX3Xo6pLhPhv\"},\"metadata\":{\"from\":\"Th7MpTaRZVRYnPiabds81Y\"},\"type\":\"0\"},\"txnMetadata\":{\"seqNo\":1,\"txnId\":\"fea82e10e894419fe2bea7d96296a6d46f50f93f9eeda954ec461b2ed2950b62\"},\"ver\":\"1\"}",
                  "--inbound-transport", "http_custodial", "0.0.0.0", "8020",
                  "--outbound-transport", "http",
-                 "--label", "base.agent",
+                 "--label", "cloud.agent",
                  "--seed", "000000000000000000000000Steward1",
                  "--wallet-type", "indy",
-                 "--wallet-name", "base.agent",
-                 "--wallet-key", "base.agent.key",
+                 "--wallet-name", "admin",
+                 "--wallet-key", "admin.key",
                  "--wallet-storage-type", "postgres_storage",
                  "--wallet-storage-config", "{\"url\":\"postgres:5432\",\"wallet_scheme\":\"MultiWalletSingleTableSharedPool\"}",
                  "--wallet-storage-creds", "{\"account\":\"postgres\",\"password\":\"mysecretpassword\",\"admin_account\":\"postgres\",\"admin_password\":\"mysecretpassword\"}",
@@ -41,52 +40,8 @@ services:
                  "--log-level", "info",
                  "--trace",
                  "--trace-target", "log",
-                 "--trace-tag", "acapy.events",
-                 "--trace-label", "base.agent.trace",
-                 "--plugin", "aries_cloudagent.wallet_handler"]
-
-  acapy-multi-alice-agent:
-    build:
-      context: https://github.com/sktston/aries-cloudagent-python.git#develop
-      dockerfile: ./docker/Dockerfile.run
-    ports:
-      - 8030-8031:8030-8031
-    networks:
-      - acapy
-    depends_on:
-      - postgres
-    entrypoint: ["./wait-for-it.sh", "postgres:5432", "--", "aca-py",
-                 "start",
-                 "--admin", "0.0.0.0", "8031",
-                 "--admin-insecure-mode",
-                 "--webhook-url", "http://host.docker.internal:8032/webhooks",
-                 "--endpoint", "http://host.docker.internal:8030",
-                 "--storage-type", "indy",
-                 "--genesis-url", "http://54.180.86.51/genesis",
-                 "--inbound-transport", "http_custodial", "0.0.0.0", "8030",
-                 "--outbound-transport", "http",
-                 "--label", "alice.agent",
-                 "--seed", "000000000000000000000000000User1",
-                 "--wallet-local-did",
-                 "--wallet-type", "indy",
-                 "--wallet-name", "alice.agent",
-                 "--wallet-key", "alice.agent.key",
-                 "--wallet-storage-type", "postgres_storage",
-                 "--wallet-storage-config", "{\"url\":\"postgres:5432\"}",
-                 "--wallet-storage-creds", "{\"account\":\"postgres\",\"password\":\"mysecretpassword\",\"admin_account\":\"postgres\",\"admin_password\":\"mysecretpassword\"}",
-                 "--auto-accept-invites",
-                 "--auto-accept-requests",
-                 "--auto-ping-connection",
-                 "--auto-respond-credential-request",
-                 "--auto-store-credential",
-                 "--auto-verify-presentation",
-                 "--auto-respond-messages",
-                 "--preserve-exchange-records",
-                 "--log-level", "info",
-                 "--trace",
-                 "--trace-target", "log",
-                 "--trace-tag", "acapy.events",
-                 "--trace-label", "alice.agent.trace",
+                 "--trace-tag", "agent.events",
+                 "--trace-label", "agent.trace",
                  "--plugin", "aries_cloudagent.wallet_handler"]
 
   postgres:

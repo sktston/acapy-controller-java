@@ -22,7 +22,7 @@ public class GlobalService {
     final String adminWalletName = "admin"; // admin wallet name when agent starts
 
     // controller configurations
-    final String webhookUrl = "http://localhost:8022/webhooks"; // url to receive webhook messages
+    final String webhookUrl = "http://host.docker.internal:8022/webhooks"; // url to receive webhook messages
     final String version = getRandomInt(1, 99) + "." + getRandomInt(1, 99) + "." + getRandomInt(1, 99); // for randomness
     final String walletName = "faber." + version; // new walletName
     final String seed = UUID.randomUUID().toString().replaceAll("-", ""); // random seed 32 characters
