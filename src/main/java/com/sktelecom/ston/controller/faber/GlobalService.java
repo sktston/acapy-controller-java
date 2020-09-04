@@ -77,7 +77,7 @@ public class GlobalService {
     public void handleMessage(String topic, String body) {
         log.info("handleMessage >>> topic:" + topic + ", body:" + body);
 
-        String state = JsonPath.read(body, "$.state");
+        String state = topic.equals("problem_report") ? null : JsonPath.read(body, "$.state");
         switch(topic) {
             case "connections":
                 // When connection with alice is done, send credential offer
@@ -120,8 +120,8 @@ public class GlobalService {
                 log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
                 break;
             case "problem_report":
-                log.warn("- Case (topic:" + topic + ", state:" + state + ") -> Print body");
-                log.info("  - body:" + prettyJson(body));
+                log.warn("- Case (topic:" + topic + ") -> Print body");
+                log.warn("  - body:" + prettyJson(body));
                 break;
             default:
                 log.warn("- Warning Unexpected topic:" + topic);
