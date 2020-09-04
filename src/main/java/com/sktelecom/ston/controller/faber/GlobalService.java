@@ -4,76 +4,63 @@ import com.jayway.jsonpath.JsonPath;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.HttpUrl;
-import okhttp3.MediaType;
-import okhttp3.MultipartBody;
-import okhttp3.RequestBody;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.UUID;
 
 import static com.sktelecom.ston.controller.utils.Common.*;
-import static com.sktelecom.ston.controller.utils.Common.requestGET;
 
 @RequiredArgsConstructor
 @Service
 @Slf4j
 public class GlobalService {
-    final String adminUrl = "http://localhost:8021";
+    // agent configurations
+    final String agentApiUrl = "http://localhost:8021";
+    final String adminWalletName = "admin"; // admin wallet name when agent starts
 
-    String version; // version for schemaId and credDefId
+    // controller configurations
+    final String webhookUrl = "http://localhost:8022/webhooks"; // url to receive webhook messages
+    final String version = getRandomInt(1, 99) + "." + getRandomInt(1, 99) + "." + getRandomInt(1, 99); // for randomness
+    final String walletName = "faber." + version; // new walletName
+    final String seed = UUID.randomUUID().toString().replaceAll("-", ""); // random seed 32 characters
+    String did; // did
+    String verkey; // verification key
     String schemaId; // schema identifier
     String credDefId; // credential definition identifier
-    String baseWalletName = "base.agent"; // walletName when aca-py starts
-    String faberWalletName = "faber.agent"; // new walletName faber uses
-    String faberSeed = UUID.randomUUID().toString().replaceAll("-", ""); // random seed 32 characters
 
     // check options
     static boolean enableRevoke = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_REVOKE", "false"));
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
-        log.info("initializeAfterStartup >>> start");
+        log.info("Create wallet and did, register did as issuer, and register webhook url");
+        createWalletAndDid();
+        registerDidAsIssuer();
+        registerWebhookUrl();
 
-        // check wallet already exist
-        String response = requestGET(adminUrl + "/wallet", baseWalletName);
-        ArrayList<String> walletList = JsonPath.read(response, "$.result");
-        if (!walletList.contains(faberWalletName)) {
-            log.info("Agent does not have wallet " + faberWalletName + " -> Create wallet and did");
-            createWalletAndDid();
-        }
-        else {
-            log.info("Agent already have wallet " + faberWalletName + " -> Use it");
-        }
+        log.info("Create schema and credential definition");
+        createSchema();
+        createCredentialDefinition();
 
-        // check credential definition already exist
-        response = requestGET(adminUrl + "/credential-definitions/created", faberWalletName);
-        ArrayList<String> credDefIds = JsonPath.read(response, "$.credential_definition_ids");
-        if (credDefIds.size() == 0) {
-            log.info("Agent does not have credential definition -> Create it");
-            version = getRandomInt(1, 99) + "." + getRandomInt(1, 99) + "." + getRandomInt(1, 99);
-            createSchema();
-            createCredentialDefinition();
-        }
-        else {
-            log.info("Agent has credential definitions -> Use first one");
-            credDefId = credDefIds.get(0);
-        }
+        log.info("Configuration of faber:");
+        log.info("- wallet name: " + walletName);
+        log.info("- seed: " + seed);
+        log.info("- did: " + did);
+        log.info("- verification key: " + verkey);
+        log.info("- webhook url: " + webhookUrl);
+        log.info("- schema ID: " + schemaId);
+        log.info("- credential definition ID: " + credDefId);
 
-        log.info("Controller uses below configuration");
-        log.info("- credential definition ID:" + credDefId);
-
-        log.info("Setting of schema and credential definition is done. Run alice now.");
-        log.info("initializeAfterStartup <<< done");
+        log.info("Initialization is done.");
+        log.info("Run alice now.");
     }
 
     public String createInvitation() {
         log.info("createInvitation >>>");
-        String response = requestPOST(adminUrl + "/connections/create-invitation", faberWalletName, "{}");
+        String response = requestPOST(agentApiUrl + "/connections/create-invitation", walletName, "{}");
         String invitation = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation")).jsonString();
         log.info("createInvitation <<< invitation:" + invitation);
         return invitation;
@@ -81,17 +68,16 @@ public class GlobalService {
 
     public String createInvitationUrl() {
         log.info("createInvitationUrl >>>");
-        String response = requestPOST(adminUrl + "/connections/create-invitation", faberWalletName, "{}");
+        String response = requestPOST(agentApiUrl + "/connections/create-invitation", walletName, "{}");
         String invitationUrl = JsonPath.read(response, "$.invitation_url");
         log.info("createInvitationUrl <<< invitationUrl:" + invitationUrl);
         return invitationUrl;
     }
 
-    public void handleMessage(Map<String, String> headers, String topic, String body) {
-        String wallet = headers.get("Wallet");
-        String state = JsonPath.read(body, "$.state");
-        log.info("handleMessage >>> wallet:" + wallet + ", topic:" + topic + ", body:" + body);
+    public void handleMessage(String topic, String body) {
+        log.info("handleMessage >>> topic:" + topic + ", body:" + body);
 
+        String state = JsonPath.read(body, "$.state");
         switch(topic) {
             case "connections":
                 // When connection with alice is done, send credential offer
@@ -142,34 +128,50 @@ public class GlobalService {
         log.info("createWalletAndDid >>>");
 
         String body = JsonPath.parse("{" +
-                "  wallet_name: '" + faberWalletName + "'," +
-                "  wallet_key: '" + faberWalletName + ".key'," +
+                "  wallet_name: '" + walletName + "'," +
+                "  wallet_key: '" + walletName + ".key'," +
                 "  wallet_type: indy" +
                 "}").jsonString();
         log.info("Create a new wallet:" + prettyJson(body));
-        String response = requestPOST(adminUrl + "/wallet", baseWalletName, body);
+        String response = requestPOST(agentApiUrl + "/wallet", adminWalletName, body);
 
-        body = JsonPath.parse("{ seed: '" + faberSeed + "'}").jsonString();
+        body = JsonPath.parse("{ seed: '" + seed + "'}").jsonString();
         log.info("Create a new local did:" + prettyJson(body));
-        response = requestPOST(adminUrl + "/wallet/did/create", faberWalletName, body);
-        String did = JsonPath.read(response, "$.result.did");
-        String verkey = JsonPath.read(response, "$.result.verkey");
+        response = requestPOST(agentApiUrl + "/wallet/did/create", walletName, body);
+        did = JsonPath.read(response, "$.result.did");
+        verkey = JsonPath.read(response, "$.result.verkey");
         log.info("created did: " + did + ", verkey: " + verkey);
+
+        log.info("createWalletAndDid <<<");
+    }
+
+    public void registerDidAsIssuer() {
+        log.info("registerDidAsIssuer >>>");
 
         String params = "?did=" + did +
                 "&verkey=" + verkey +
-                "&alias=" + faberWalletName +
+                "&alias=" + walletName +
                 "&role=ENDORSER";
         log.info("Register the did to the ledger as a ENDORSER");
-        // baseWallet's DID must have STEWARD role
-        response = requestPOST(adminUrl + "/ledger/register-nym" + params, baseWalletName, "{}");
+        // did of admin wallet must have STEWARD role
+        String response = requestPOST(agentApiUrl + "/ledger/register-nym" + params, adminWalletName, "{}");
 
         params = "?did=" + did;
         log.info("Assign the did to public: " + did);
-        response = requestPOST(adminUrl + "/wallet/did/public" + params, faberWalletName, "{}");
+        response = requestPOST(agentApiUrl + "/wallet/did/public" + params, walletName, "{}");
         log.info("response: " + response);
 
-        log.info("createWalletAndDid <<<");
+        log.info("registerDidAsIssuer <<<");
+    }
+
+    public void registerWebhookUrl() {
+        log.info("registerWebhookUrl >>>");
+
+        String body = JsonPath.parse("{ target_url: '" + webhookUrl + "' }").jsonString();
+        log.info("Create a new webhook target:" + prettyJson(body));
+        String response = requestPOST(agentApiUrl + "/webhooks", walletName, body);
+
+        log.info("registerWebhookUrl <<<");
     }
 
     public void createSchema() {
@@ -181,7 +183,7 @@ public class GlobalService {
                 "  attributes: ['name', 'date', 'degree', 'age']" +
                 "}").jsonString();
         log.info("Create a new schema on the ledger:" + prettyJson(body));
-        String response = requestPOST(adminUrl + "/schemas", faberWalletName, body);
+        String response = requestPOST(agentApiUrl + "/schemas", walletName, body);
         schemaId = JsonPath.read(response, "$.schema_id");
 
         log.info("createSchema <<<");
@@ -197,7 +199,7 @@ public class GlobalService {
                 "  revocation_registry_size: 10" +
                 "}").jsonString();
         log.info("Create a new credential definition on the ledger:" + prettyJson(body));
-        String response = requestPOST(adminUrl + "/credential-definitions", faberWalletName, body);
+        String response = requestPOST(agentApiUrl + "/credential-definitions", walletName, body);
         credDefId = JsonPath.read(response, "$.credential_definition_id");
 
         log.info("createCredentialDefinition <<<");
@@ -217,7 +219,7 @@ public class GlobalService {
                 "    ]" +
                 "  }" +
                 "}").jsonString();
-        String response = requestPOST(adminUrl + "/issue-credential/send-offer", faberWalletName, body);
+        String response = requestPOST(agentApiUrl + "/issue-credential/send-offer", walletName, body);
     }
 
     public void sendProofRequest(String connectionId) {
@@ -252,7 +254,7 @@ public class GlobalService {
                 "    non_revoked: { to: " + curUnixTime + " }" +
                 "  }" +
                 "}").jsonString();
-        String response = requestPOST(adminUrl + "/present-proof/send-request", faberWalletName, body);
+        String response = requestPOST(agentApiUrl + "/present-proof/send-request", walletName, body);
     }
 
     public void printProofResult(String body) {
@@ -265,13 +267,13 @@ public class GlobalService {
     public void revokeCredential(String revRegId, String credRevId) {
         log.info("revokeCredential >>> revRegId:" + revRegId + ", credRevId:" + credRevId);
 
-        HttpUrl.Builder urlBuilder = HttpUrl.parse(adminUrl + "/issue-credential/revoke").newBuilder();
+        HttpUrl.Builder urlBuilder = HttpUrl.parse(agentApiUrl + "/issue-credential/revoke").newBuilder();
         urlBuilder.addQueryParameter("rev_reg_id", revRegId);
         urlBuilder.addQueryParameter("cred_rev_id", credRevId);
         urlBuilder.addQueryParameter("publish", "true");
         String url = urlBuilder.build().toString();
 
-        String response =  requestPOST(url, faberWalletName, "{}");
+        String response =  requestPOST(url, walletName, "{}");
     }
 
 }

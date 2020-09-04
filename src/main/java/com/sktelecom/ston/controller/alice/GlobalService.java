@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.UUID;
 
 import static com.sktelecom.ston.controller.utils.Common.*;
 
@@ -17,23 +17,42 @@ import static com.sktelecom.ston.controller.utils.Common.*;
 @Service
 @Slf4j
 public class GlobalService {
-    final String adminUrl = "http://localhost:8031";
-    final String faberContUrl = "http://localhost:8022";
+    // agent configurations
+    final String agentApiUrl = "http://localhost:8021";
+    final String adminWalletName = "admin"; // admin wallet name when agent starts
 
-    String walletName = "alice.agent";
+    // controller configurations
+    final String webhookUrl = "http://localhost:8023/webhooks"; // url to receive webhook messages
+    final String version = getRandomInt(1, 99) + "." + getRandomInt(1, 99) + "." + getRandomInt(1, 99); // for randomness
+    final String walletName = "alice." + version; // new walletName
+    final String seed = UUID.randomUUID().toString().replaceAll("-", ""); // random seed 32 characters
+    String did; // did
+    String verkey; // verification key
+
+    // faber configuration
+    final String faberContUrl = "http://localhost:8022";
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
-        log.info("initializeAfterStartup >>> start");
+        log.info("Create wallet and did, and register webhook url");
+        createWalletAndDid();
+        registerWebhookUrl();
+
+        log.info("Configuration of faber:");
+        log.info("- wallet name: " + walletName);
+        log.info("- seed: " + seed);
+        log.info("- did: " + did);
+        log.info("- verification key: " + verkey);
+        log.info("- webhook url: " + webhookUrl);
+
+        log.info("Receive invitation from faber controller");
         receiveInvitation();
-        log.info("initializeAfterStartup <<< done");
     }
 
-    public void handleMessage(Map<String, String> headers, String topic, String body) {
-        String wallet = headers.get("Wallet");
-        String state = JsonPath.read(body, "$.state");
-        log.info("handleMessage >>> wallet:" + wallet + ", topic:" + topic + ", body:" + body);
+    public void handleMessage(String topic, String body) {
+        log.info("handleMessage >>> topic:" + topic + ", body:" + body);
 
+        String state = JsonPath.read(body, "$.state");
         switch(topic) {
             case "connections":
                 log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
@@ -71,21 +90,52 @@ public class GlobalService {
         }
     }
 
+    public void createWalletAndDid() {
+        log.info("createWalletAndDid >>>");
+
+        String body = JsonPath.parse("{" +
+                "  wallet_name: '" + walletName + "'," +
+                "  wallet_key: '" + walletName + ".key'," +
+                "  wallet_type: indy" +
+                "}").jsonString();
+        log.info("Create a new wallet:" + prettyJson(body));
+        String response = requestPOST(agentApiUrl + "/wallet", adminWalletName, body);
+
+        body = JsonPath.parse("{ seed: '" + seed + "'}").jsonString();
+        log.info("Create a new local did:" + prettyJson(body));
+        response = requestPOST(agentApiUrl + "/wallet/did/create", walletName, body);
+        did = JsonPath.read(response, "$.result.did");
+        verkey = JsonPath.read(response, "$.result.verkey");
+        log.info("created did: " + did + ", verkey: " + verkey);
+
+        log.info("createWalletAndDid <<<");
+    }
+
+    public void registerWebhookUrl() {
+        log.info("registerWebhookUrl >>>");
+
+        String body = JsonPath.parse("{ target_url: '" + webhookUrl + "' }").jsonString();
+        log.info("Create a new webhook target:" + prettyJson(body));
+        String response = requestPOST(agentApiUrl + "/webhooks", walletName, body);
+
+        log.info("registerWebhookUrl <<<");
+    }
+
     public void receiveInvitation() {
         log.info("receiveInvitation >>>");
         String invitation = requestGET(faberContUrl + "/invitation", "");
         log.info("invitation:" + invitation);
-        String response = requestPOST(adminUrl + "/connections/receive-invitation", walletName, invitation);
+        String response = requestPOST(agentApiUrl + "/connections/receive-invitation", walletName, invitation);
         log.info("receiveInvitation <<<");
     }
 
     public void sendCredentialRequest(String credExId) {
-        String response = requestPOST(adminUrl + "/issue-credential/records/" + credExId + "/send-request", walletName, "{}");
+        String response = requestPOST(agentApiUrl + "/issue-credential/records/" + credExId + "/send-request", walletName, "{}");
     }
 
     public void sendProof(String reqBody) {
         String presExId = JsonPath.read(reqBody, "$.presentation_exchange_id");
-        String response = requestGET(adminUrl + "/present-proof/records/" + presExId + "/credentials", walletName);
+        String response = requestGET(agentApiUrl + "/present-proof/records/" + presExId + "/credentials", walletName);
 
         ArrayList<LinkedHashMap<String, Object>> credentials = JsonPath.read(response, "$");
         int credRevId = 0;
@@ -114,7 +164,7 @@ public class GlobalService {
                 .put("$", "requested_predicates", reqPreds)
                 .put("$", "self_attested_attributes", selfAttrs).jsonString();
 
-        response = requestPOST(adminUrl + "/present-proof/records/" + presExId + "/send-presentation", walletName, body);
+        response = requestPOST(agentApiUrl + "/present-proof/records/" + presExId + "/send-presentation", walletName, body);
     }
 
 }
