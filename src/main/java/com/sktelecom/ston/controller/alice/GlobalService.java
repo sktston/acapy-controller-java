@@ -16,14 +16,13 @@ import static com.sktelecom.ston.controller.utils.Common.*;
 @Service
 @Slf4j
 public class GlobalService {
-    final String adminUrl = "http://localhost:8031";
+    final String agentApiUrl = "http://localhost:8031";
     final String faberContUrl = "http://localhost:8022";
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
-        log.info("initializeAfterStartup >>> start");
+        log.info("Receive invitation from faber controller");
         receiveInvitation();
-        log.info("initializeAfterStartup <<< done");
     }
 
     public void handleMessage(String topic, String body) {
@@ -71,17 +70,17 @@ public class GlobalService {
         log.info("receiveInvitation >>>");
         String invitation = requestGET(faberContUrl + "/invitation");
         log.info("invitation:" + invitation);
-        String response = requestPOST(adminUrl + "/connections/receive-invitation", invitation);
+        String response = requestPOST(agentApiUrl + "/connections/receive-invitation", invitation);
         log.info("receiveInvitation <<<");
     }
 
     public void sendCredentialRequest(String credExId) {
-        String response = requestPOST(adminUrl + "/issue-credential/records/" + credExId + "/send-request", "{}");
+        String response = requestPOST(agentApiUrl + "/issue-credential/records/" + credExId + "/send-request", "{}");
     }
 
     public void sendProof(String reqBody) {
         String presExId = JsonPath.read(reqBody, "$.presentation_exchange_id");
-        String response = requestGET(adminUrl + "/present-proof/records/" + presExId + "/credentials");
+        String response = requestGET(agentApiUrl + "/present-proof/records/" + presExId + "/credentials");
 
         ArrayList<LinkedHashMap<String, Object>> credentials = JsonPath.read(response, "$");
         int credRevId = 0;
@@ -110,7 +109,7 @@ public class GlobalService {
                 .put("$", "requested_predicates", reqPreds)
                 .put("$", "self_attested_attributes", selfAttrs).jsonString();
 
-        response = requestPOST(adminUrl + "/present-proof/records/" + presExId + "/send-presentation", body);
+        response = requestPOST(agentApiUrl + "/present-proof/records/" + presExId + "/send-presentation", body);
     }
 
 }

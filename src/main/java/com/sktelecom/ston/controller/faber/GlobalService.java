@@ -8,19 +8,17 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
 import static com.sktelecom.ston.controller.utils.Common.*;
-import static com.sktelecom.ston.controller.utils.Common.requestGET;
 
 @RequiredArgsConstructor
 @Service
 @Slf4j
 public class GlobalService {
-    final String adminUrl = "http://localhost:8021";
+    final String agentApiUrl = "http://localhost:8021";
 
-    String version; // version for schemaId and credDefId
+    final String version = getRandomInt(1, 99) + "." + getRandomInt(1, 99) + "." + getRandomInt(1, 99); // for randomness
     String schemaId; // schema identifier
     String credDefId; // credential definition identifier
 
@@ -29,32 +27,21 @@ public class GlobalService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
-        log.info("initializeAfterStartup >>> start");
+        log.info("Create schema and credential definition");
+        createSchema();
+        createCredentialDefinition();
 
-        String response = requestGET(adminUrl + "/credential-definitions/created");
-        ArrayList<String> credDefIds = JsonPath.read(response, "$.credential_definition_ids");
+        log.info("Configuration of faber:");
+        log.info("- schema ID: " + schemaId);
+        log.info("- credential definition ID: " + credDefId);
 
-        if (credDefIds.size() == 0) {
-            log.info("Agent does not have credential definition -> Create it");
-            version = getRandomInt(1, 99) + "." + getRandomInt(1, 99) + "." + getRandomInt(1, 99);
-            createSchema();
-            createCredDef();
-        }
-        else {
-            log.info("Agent has credential definitions -> Use first one");
-            credDefId = credDefIds.get(0);
-        }
-
-        log.info("Controller uses below configuration");
-        log.info("- credential definition ID:" + credDefId);
-
-        log.info("Setting of schema and credential definition is done. Run alice now.");
-        log.info("initializeAfterStartup <<< done");
+        log.info("Initialization is done.");
+        log.info("Run alice now.");
     }
 
     public String createInvitation() {
         log.info("createInvitation >>>");
-        String response = requestPOST(adminUrl + "/connections/create-invitation", "{}");
+        String response = requestPOST(agentApiUrl + "/connections/create-invitation", "{}");
         String invitation = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation")).jsonString();
         log.info("createInvitation <<< invitation:" + invitation);
         return invitation;
@@ -62,7 +49,7 @@ public class GlobalService {
 
     public String createInvitationUrl() {
         log.info("createInvitationUrl >>>");
-        String response = requestPOST(adminUrl + "/connections/create-invitation", "{}");
+        String response = requestPOST(agentApiUrl + "/connections/create-invitation", "{}");
         String invitationUrl = JsonPath.read(response, "$.invitation_url");
         log.info("createInvitationUrl <<< invitationUrl:" + invitationUrl);
         return invitationUrl;
@@ -131,14 +118,14 @@ public class GlobalService {
                 "  attributes: ['name', 'date', 'degree', 'age']" +
                 "}").jsonString();
         log.info("Create a new schema on the ledger:" + prettyJson(body));
-        String response = requestPOST(adminUrl + "/schemas", body);
+        String response = requestPOST(agentApiUrl + "/schemas", body);
         schemaId = JsonPath.read(response, "$.schema_id");
 
         log.info("createSchema <<<");
     }
 
-    public void createCredDef() {
-        log.info("createCredDef >>>");
+    public void createCredentialDefinition() {
+        log.info("createCredentialDefinition >>>");
 
         String body = JsonPath.parse("{" +
                 "  schema_id: '" + schemaId + "'," +
@@ -147,10 +134,10 @@ public class GlobalService {
                 "  revocation_registry_size: 10" +
                 "}").jsonString();
         log.info("Create a new credential definition on the ledger:" + prettyJson(body));
-        String response = requestPOST(adminUrl + "/credential-definitions", body);
+        String response = requestPOST(agentApiUrl + "/credential-definitions", body);
         credDefId = JsonPath.read(response, "$.credential_definition_id");
 
-        log.info("createCredDef <<<");
+        log.info("createCredentialDefinition <<<");
     }
 
     public void sendCredentialOffer(String connectionId) {
@@ -167,7 +154,7 @@ public class GlobalService {
                 "    ]" +
                 "  }" +
                 "}").jsonString();
-        String response = requestPOST(adminUrl + "/issue-credential/send-offer", body);
+        String response = requestPOST(agentApiUrl + "/issue-credential/send-offer", body);
     }
 
     public void sendProofRequest(String connectionId) {
@@ -200,7 +187,7 @@ public class GlobalService {
                 "    }" +
                 "  }" +
                 "}").jsonString();
-        String response = requestPOST(adminUrl + "/present-proof/send-request", body);
+        String response = requestPOST(agentApiUrl + "/present-proof/send-request", body);
     }
 
     public void printProofResult(String body) {
@@ -213,7 +200,7 @@ public class GlobalService {
     public void revokeCredential(String revRegId, String credRevId) {
         log.info("revokeCredential >>> revRegId:" + revRegId + ", credRevId:" + credRevId);
 
-        HttpUrl.Builder urlBuilder = HttpUrl.parse(adminUrl + "/issue-credential/revoke").newBuilder();
+        HttpUrl.Builder urlBuilder = HttpUrl.parse(agentApiUrl + "/issue-credential/revoke").newBuilder();
         urlBuilder.addQueryParameter("rev_reg_id", revRegId);
         urlBuilder.addQueryParameter("cred_rev_id", credRevId);
         urlBuilder.addQueryParameter("publish", "true");
