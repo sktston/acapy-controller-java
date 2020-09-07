@@ -38,7 +38,7 @@ public class GlobalService {
         createWalletAndDid();
         registerWebhookUrl();
 
-        log.info("Configuration of faber:");
+        log.info("Configuration of alice:");
         log.info("- wallet name: " + walletName);
         log.info("- seed: " + seed);
         log.info("- did: " + did);
