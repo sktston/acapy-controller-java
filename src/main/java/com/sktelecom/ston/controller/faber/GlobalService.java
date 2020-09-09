@@ -132,9 +132,9 @@ public class GlobalService {
         log.info("createWalletAndDid >>>");
 
         String body = JsonPath.parse("{" +
-                "  wallet_name: '" + walletName + "'," +
-                "  wallet_key: '" + walletName + ".key'," +
-                "  wallet_type: indy" +
+                "  name: '" + walletName + "'," +
+                "  key: '" + walletName + ".key'," +
+                "  type: 'indy'" +
                 "}").jsonString();
         log.info("Create a new wallet:" + prettyJson(body));
         String response = requestPOST(agentApiUrl + "/wallet", adminWalletName, body);
