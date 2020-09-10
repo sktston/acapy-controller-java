@@ -7,9 +7,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.UUID;
+import java.util.*;
 
 import static com.sktelecom.ston.controller.utils.Common.*;
 
@@ -74,8 +72,8 @@ public class GlobalService {
                     sendProof(body);
                 }
                 else if (state.equals("presentation_acked")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
-                    log.info("Alice demo is completed (Exit manually)");
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> deleteWalletAndExit");
+                    deleteWalletAndExit();
                 }
                 else {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
@@ -95,8 +93,6 @@ public class GlobalService {
     }
 
     public void createWalletAndDid() {
-        log.info("createWalletAndDid >>>");
-
         String body = JsonPath.parse("{" +
                 "  name: '" + walletName + "'," +
                 "  key: '" + walletName + ".key'," +
@@ -111,26 +107,18 @@ public class GlobalService {
         did = JsonPath.read(response, "$.result.did");
         verkey = JsonPath.read(response, "$.result.verkey");
         log.info("created did: " + did + ", verkey: " + verkey);
-
-        log.info("createWalletAndDid <<<");
     }
 
     public void registerWebhookUrl() {
-        log.info("registerWebhookUrl >>>");
-
         String body = JsonPath.parse("{ target_url: '" + webhookUrl + "' }").jsonString();
         log.info("Create a new webhook target:" + prettyJson(body));
         String response = requestPOST(agentApiUrl + "/webhooks", walletName, body);
-
-        log.info("registerWebhookUrl <<<");
     }
 
     public void receiveInvitation() {
-        log.info("receiveInvitation >>>");
         String invitation = requestGET(faberContUrl + "/invitation", "");
         log.info("invitation:" + invitation);
         String response = requestPOST(agentApiUrl + "/connections/receive-invitation", walletName, invitation);
-        log.info("receiveInvitation <<<");
     }
 
     public void sendCredentialRequest(String credExId) {
@@ -171,4 +159,20 @@ public class GlobalService {
         response = requestPOST(agentApiUrl + "/present-proof/records/" + presExId + "/send-presentation", walletName, body);
     }
 
+    public void deleteWallet() {
+        log.info("Delete my wallet - walletName: " + walletName);
+        String response = requestDELETE(agentApiUrl + "/wallet/me", walletName);
+    }
+
+    public void deleteWalletAndExit() {
+        TimerTask task = new TimerTask() {
+            public void run() {
+                deleteWallet();
+                log.info("Alice demo completes");
+                System.exit(0);
+            }
+        };
+        Timer timer = new Timer("Timer");
+        timer.schedule(task, 100L);
+    }
 }

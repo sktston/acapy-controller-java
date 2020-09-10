@@ -8,6 +8,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PreDestroy;
 import java.util.LinkedHashMap;
 import java.util.UUID;
 
@@ -59,7 +60,6 @@ public class GlobalService {
     }
 
     public String createInvitation() {
-        log.info("createInvitation >>>");
         String response = requestPOST(agentApiUrl + "/connections/create-invitation", walletName, "{}");
         String invitation = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation")).jsonString();
         log.info("createInvitation <<< invitation:" + invitation);
@@ -67,7 +67,6 @@ public class GlobalService {
     }
 
     public String createInvitationUrl() {
-        log.info("createInvitationUrl >>>");
         String response = requestPOST(agentApiUrl + "/connections/create-invitation", walletName, "{}");
         String invitationUrl = JsonPath.read(response, "$.invitation_url");
         log.info("createInvitationUrl <<< invitationUrl:" + invitationUrl);
@@ -129,8 +128,6 @@ public class GlobalService {
     }
 
     public void createWalletAndDid() {
-        log.info("createWalletAndDid >>>");
-
         String body = JsonPath.parse("{" +
                 "  name: '" + walletName + "'," +
                 "  key: '" + walletName + ".key'," +
@@ -145,13 +142,9 @@ public class GlobalService {
         did = JsonPath.read(response, "$.result.did");
         verkey = JsonPath.read(response, "$.result.verkey");
         log.info("created did: " + did + ", verkey: " + verkey);
-
-        log.info("createWalletAndDid <<<");
     }
 
     public void registerDidAsIssuer() {
-        log.info("registerDidAsIssuer >>>");
-
         String params = "?did=" + did +
                 "&verkey=" + verkey +
                 "&alias=" + walletName +
@@ -164,23 +157,15 @@ public class GlobalService {
         log.info("Assign the did to public: " + did);
         response = requestPOST(agentApiUrl + "/wallet/did/public" + params, walletName, "{}");
         log.info("response: " + response);
-
-        log.info("registerDidAsIssuer <<<");
     }
 
     public void registerWebhookUrl() {
-        log.info("registerWebhookUrl >>>");
-
         String body = JsonPath.parse("{ target_url: '" + webhookUrl + "' }").jsonString();
         log.info("Create a new webhook target:" + prettyJson(body));
         String response = requestPOST(agentApiUrl + "/webhooks", walletName, body);
-
-        log.info("registerWebhookUrl <<<");
     }
 
     public void createSchema() {
-        log.info("createSchema >>>");
-
         String body = JsonPath.parse("{" +
                 "  schema_name: 'degree_schema'," +
                 "  schema_version: '" + version + "'," +
@@ -189,13 +174,9 @@ public class GlobalService {
         log.info("Create a new schema on the ledger:" + prettyJson(body));
         String response = requestPOST(agentApiUrl + "/schemas", walletName, body);
         schemaId = JsonPath.read(response, "$.schema_id");
-
-        log.info("createSchema <<<");
     }
 
     public void createCredentialDefinition() {
-        log.info("createCredentialDefinition >>>");
-
         String body = JsonPath.parse("{" +
                 "  schema_id: '" + schemaId + "'," +
                 "  tag: 'tag." + version + "'," +
@@ -205,8 +186,6 @@ public class GlobalService {
         log.info("Create a new credential definition on the ledger:" + prettyJson(body));
         String response = requestPOST(agentApiUrl + "/credential-definitions", walletName, body);
         credDefId = JsonPath.read(response, "$.credential_definition_id");
-
-        log.info("createCredentialDefinition <<<");
     }
 
     public void sendCredentialOffer(String connectionId) {
