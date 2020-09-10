@@ -14,7 +14,7 @@ public class GlobalController {
     @Autowired
     GlobalService globalService;
 
-    @PostMapping("/webhooks/topic/{topic}/")
+    @PostMapping("/webhooks/topic/{topic}")
     public ResponseEntity webhooksTopicHandler(
             @PathVariable String topic,
             @RequestBody String body) {
