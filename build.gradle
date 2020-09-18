@@ -52,7 +52,3 @@ task alice(type:JavaExec) {
     main = 'com.sktelecom.ston.controller.alice.Application'
     args(['--spring.config.location=classpath:/application-alice.properties'])
 }
-
-
-
-

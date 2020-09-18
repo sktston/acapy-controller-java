@@ -133,13 +133,18 @@ public class GlobalService {
         int credRevId = 0;
         String credId = null;
         for (LinkedHashMap<String, Object> element : credentials) {
-            int curCredRevId = Integer.parseInt(JsonPath.read(element, "$.cred_info.cred_rev_id"));
-            if (curCredRevId > credRevId) {
-                credRevId = curCredRevId;
+            if (JsonPath.read(element, "$.cred_info.cred_rev_id") != null){ // case of support revocation
+                int curCredRevId = Integer.parseInt(JsonPath.read(element, "$.cred_info.cred_rev_id"));
+                if (curCredRevId > credRevId) {
+                    credRevId = curCredRevId;
+                    credId = JsonPath.read(element, "$.cred_info.referent");
+                }
+            }
+            else { // case of not support revocation
                 credId = JsonPath.read(element, "$.cred_info.referent");
             }
         }
-        log.info("Use latest credential in demo - credRevId:" + credRevId + ", credId:"+ credId);
+        log.info("Use latest credential in demo - credRevId: " + credRevId + ", credId: "+ credId);
 
         // Make body using presentation_request
         LinkedHashMap<String, Object> reqAttrs = JsonPath.read(reqBody, "$.presentation_request.requested_attributes");
