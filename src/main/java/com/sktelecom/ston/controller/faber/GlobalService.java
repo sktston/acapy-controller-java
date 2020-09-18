@@ -147,10 +147,12 @@ public class GlobalService {
         String params = "?did=" + did +
                 "&verkey=" + verkey +
                 "&alias=" + walletName +
-                "&role=ENDORSER";
+                "&role=ENDORSER" +
+                "&target_wallet=" + walletName;
         log.info("Register the did to the ledger as a ENDORSER");
         // did of admin wallet must have STEWARD role
         String response = requestPOST(agentApiUrl + "/ledger/register-nym" + params, adminWalletName, "{}");
+        log.info("response: " + response);
 
         params = "?did=" + did;
         log.info("Assign the did to public: " + did);
