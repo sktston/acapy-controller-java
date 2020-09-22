@@ -107,6 +107,11 @@ public class GlobalService {
         String response = requestPOST(agentApiUrl + "/wallet", adminWalletName, body);
         log.info("response:" + prettyJson(response));
 
+        body = JsonPath.parse("{ label: '" + walletName + ".label'}").jsonString();
+        log.info("Update a label of the wallet:" + prettyJson(body));
+        response = requestPUT(agentApiUrl + "/wallet/me", walletName, body);
+        log.info("response:" + prettyJson(response));
+
         body = JsonPath.parse("{ seed: '" + seed + "'}").jsonString();
         log.info("Create a new local did:" + prettyJson(body));
         response = requestPOST(agentApiUrl + "/wallet/did/create", walletName, body);

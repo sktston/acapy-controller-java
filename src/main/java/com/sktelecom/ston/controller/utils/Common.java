@@ -67,6 +67,22 @@ public class Common {
         return null;
     }
 
+    public static String requestPUT(String url, String walletName, String json) {
+        OkHttpClient client = getClient(60);
+        Request request = new Request.Builder()
+                .url(url)
+                .put(RequestBody.create(json, MediaType.parse("application/json")))
+                .addHeader("Wallet", walletName)
+                .build();
+        try {
+            Response response = client.newCall(request).execute();
+            return response.body().string();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public static String requestDELETE(String url, String walletName) {
         OkHttpClient client = getClient(60);
         Request request = new Request.Builder()
@@ -115,18 +131,4 @@ public class Common {
         return null;
     }
 
-    public static String requestPUT(String url, RequestBody body) {
-        OkHttpClient client = getClient(60);
-        Request request = new Request.Builder()
-                .url(url)
-                .put(body)
-                .build();
-        try {
-            Response response = client.newCall(request).execute();
-            return response.body().string();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
 }
