@@ -4,6 +4,7 @@ import com.jayway.jsonpath.JsonPath;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.HttpUrl;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -22,10 +23,13 @@ public class GlobalService {
     final String adminWalletName = "admin"; // admin wallet name when agent starts
 
     // controller configurations
-    final String webhookUrl = "http://host.docker.internal:8022/webhooks"; // url to receive webhook messages
+    @Value("${controllerUrl}")
+    private String controllerUrl; // FIXME: adjust url in application-faber.properties
+
     final String version = getRandomInt(1, 99) + "." + getRandomInt(1, 99) + "." + getRandomInt(1, 99); // for randomness
     final String walletName = "faber." + version; // new walletName
     final String seed = UUID.randomUUID().toString().replaceAll("-", ""); // random seed 32 characters
+    String webhookUrl; // url to receive webhook messages
     String did; // did
     String verkey; // verification key
     String schemaId; // schema identifier
@@ -134,6 +138,7 @@ public class GlobalService {
                 "}").jsonString();
         log.info("Create a new wallet:" + prettyJson(body));
         String response = requestPOST(agentApiUrl + "/wallet", adminWalletName, body);
+        log.info("response:" + prettyJson(response));
 
         body = JsonPath.parse("{ seed: '" + seed + "'}").jsonString();
         log.info("Create a new local did:" + prettyJson(body));
@@ -161,6 +166,7 @@ public class GlobalService {
     }
 
     public void registerWebhookUrl() {
+        webhookUrl = controllerUrl + "/webhooks";
         String body = JsonPath.parse("{ target_url: '" + webhookUrl + "' }").jsonString();
         log.info("Create a new webhook target:" + prettyJson(body));
         String response = requestPOST(agentApiUrl + "/webhooks", walletName, body);
