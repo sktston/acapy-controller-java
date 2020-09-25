@@ -3,6 +3,7 @@ package com.sktelecom.ston.controller.faber;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +31,12 @@ public class GlobalController {
             @RequestBody String body) {
         globalService.handleMessage(topic, body);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/invitation-qr", produces = MediaType.IMAGE_PNG_VALUE)
+    public byte[] getInvitationUrlQRCode() {
+        String invitationUrl = globalService.createInvitationUrl();
+        return globalService.generateQRCode(invitationUrl, 300, 300);
     }
 
 }
