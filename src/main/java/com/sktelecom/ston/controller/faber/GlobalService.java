@@ -38,6 +38,7 @@ public class GlobalService {
 
     final String version = getRandomInt(1, 99) + "." + getRandomInt(1, 99) + "." + getRandomInt(1, 99); // for randomness
     final String walletName = "faber." + version; // new walletName
+    final String imageUrl = "https://identicon-api.herokuapp.com/" + walletName + "/300?format=png";
     final String seed = UUID.randomUUID().toString().replaceAll("-", ""); // random seed 32 characters
     String webhookUrl; // url to receive webhook messages
     String did; // did
@@ -150,7 +151,11 @@ public class GlobalService {
         String response = requestPOST(agentApiUrl + "/wallet", adminWalletName, body);
         log.info("response:" + prettyJson(response));
 
-        body = JsonPath.parse("{ label: '" + walletName + ".label'}").jsonString();
+
+        body = JsonPath.parse("{" +
+                "  label: '" + walletName + ".label'," +
+                "  image_url: '" + imageUrl + "'" +
+                "}").jsonString();
         log.info("Update a label of the wallet:" + prettyJson(body));
         response = requestPUT(agentApiUrl + "/wallet/me", walletName, body);
         log.info("response:" + prettyJson(response));
