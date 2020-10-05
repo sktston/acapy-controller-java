@@ -142,23 +142,17 @@ public class GlobalService {
     }
 
     public void createWalletAndDid() {
+        webhookUrl = controllerUrl + "/webhooks";
         String body = JsonPath.parse("{" +
                 "  name: '" + walletName + "'," +
                 "  key: '" + walletName + ".key'," +
-                "  type: 'indy'" +
-                "}").jsonString();
-        log.info("Create a new wallet:" + prettyJson(body));
-        String response = requestPOST(agentApiUrl + "/wallet", adminWalletName, body);
-        log.info("response:" + prettyJson(response));
-
-        webhookUrl = controllerUrl + "/webhooks";
-        body = JsonPath.parse("{" +
+                "  type: 'indy'," +
                 "  label: '" + walletName + ".label'," +
                 "  image_url: '" + imageUrl + "'," +
                 "  webhook_urls: ['" + webhookUrl + "']" +
                 "}").jsonString();
-        log.info("Update a configuration of the wallet:" + prettyJson(body));
-        response = requestPUT(agentApiUrl + "/wallet/me", walletName, body);
+        log.info("Create a new wallet:" + prettyJson(body));
+        String response = requestPOST(agentApiUrl + "/wallet", adminWalletName, body);
         log.info("response:" + prettyJson(response));
 
         body = JsonPath.parse("{ seed: '" + seed + "'}").jsonString();
