@@ -26,6 +26,7 @@ public class GlobalService {
 
     final String version = getRandomInt(1, 99) + "." + getRandomInt(1, 99) + "." + getRandomInt(1, 99); // for randomness
     final String walletName = "alice." + version; // new walletName
+    final String imageUrl = "https://identicon-api.herokuapp.com/" + walletName + "/300?format=png";
     final String seed = UUID.randomUUID().toString().replaceAll("-", ""); // random seed 32 characters
     String webhookUrl; // url to receive webhook messagess
     String did; // did
@@ -39,7 +40,6 @@ public class GlobalService {
     public void initializeAfterStartup() {
         log.info("Create wallet and did, and register webhook url");
         createWalletAndDid();
-        registerWebhookUrl();
 
         log.info("Configuration of alice:");
         log.info("- wallet name: " + walletName);
@@ -107,8 +107,14 @@ public class GlobalService {
         String response = requestPOST(agentApiUrl + "/wallet", adminWalletName, body);
         log.info("response:" + prettyJson(response));
 
-        body = JsonPath.parse("{ label: '" + walletName + ".label'}").jsonString();
-        log.info("Update a label of the wallet:" + prettyJson(body));
+
+        webhookUrl = controllerUrl + "/webhooks";
+        body = JsonPath.parse("{" +
+                "  label: '" + walletName + ".label'," +
+                "  image_url: '" + imageUrl + "'," +
+                "  webhook_urls: ['" + webhookUrl + "']" +
+                "}").jsonString();
+        log.info("Update a configuration of the wallet:" + prettyJson(body));
         response = requestPUT(agentApiUrl + "/wallet/me", walletName, body);
         log.info("response:" + prettyJson(response));
 
@@ -118,13 +124,6 @@ public class GlobalService {
         did = JsonPath.read(response, "$.result.did");
         verkey = JsonPath.read(response, "$.result.verkey");
         log.info("created did: " + did + ", verkey: " + verkey);
-    }
-
-    public void registerWebhookUrl() {
-        webhookUrl = controllerUrl + "/webhooks";
-        String body = JsonPath.parse("{ target_url: '" + webhookUrl + "' }").jsonString();
-        log.info("Create a new webhook target:" + prettyJson(body));
-        String response = requestPOST(agentApiUrl + "/webhooks", walletName, body);
     }
 
     public void receiveInvitation() {

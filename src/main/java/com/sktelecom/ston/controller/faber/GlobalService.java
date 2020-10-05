@@ -51,10 +51,10 @@ public class GlobalService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
-        log.info("Create wallet and did, register did as issuer, and register webhook url");
+        log.info("Create wallet and did, and register webhook url");
         createWalletAndDid();
+        log.info("Register did as issuer");
         registerDidAsIssuer();
-        registerWebhookUrl();
 
         log.info("Create schema and credential definition");
         createSchema();
@@ -151,12 +151,13 @@ public class GlobalService {
         String response = requestPOST(agentApiUrl + "/wallet", adminWalletName, body);
         log.info("response:" + prettyJson(response));
 
-
+        webhookUrl = controllerUrl + "/webhooks";
         body = JsonPath.parse("{" +
                 "  label: '" + walletName + ".label'," +
-                "  image_url: '" + imageUrl + "'" +
+                "  image_url: '" + imageUrl + "'," +
+                "  webhook_urls: ['" + webhookUrl + "']" +
                 "}").jsonString();
-        log.info("Update a label of the wallet:" + prettyJson(body));
+        log.info("Update a configuration of the wallet:" + prettyJson(body));
         response = requestPUT(agentApiUrl + "/wallet/me", walletName, body);
         log.info("response:" + prettyJson(response));
 
@@ -183,13 +184,6 @@ public class GlobalService {
         log.info("Assign the did to public: " + did);
         response = requestPOST(agentApiUrl + "/wallet/did/public" + params, walletName, "{}");
         log.info("response: " + response);
-    }
-
-    public void registerWebhookUrl() {
-        webhookUrl = controllerUrl + "/webhooks";
-        String body = JsonPath.parse("{ target_url: '" + webhookUrl + "' }").jsonString();
-        log.info("Create a new webhook target:" + prettyJson(body));
-        String response = requestPOST(agentApiUrl + "/webhooks", walletName, body);
     }
 
     public void createSchema() {
