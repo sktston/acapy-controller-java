@@ -264,14 +264,13 @@ public class GlobalService {
 
     public void revokeCredential(String revRegId, String credRevId) {
         log.info("revokeCredential >>> revRegId:" + revRegId + ", credRevId:" + credRevId);
-
-        HttpUrl.Builder urlBuilder = HttpUrl.parse(agentApiUrl + "/issue-credential/revoke").newBuilder();
-        urlBuilder.addQueryParameter("rev_reg_id", revRegId);
-        urlBuilder.addQueryParameter("cred_rev_id", credRevId);
-        urlBuilder.addQueryParameter("publish", "true");
-        String url = urlBuilder.build().toString();
-
-        String response =  requestPOST(url, walletName, "{}");
+        String body = JsonPath.parse("{" +
+                "  rev_reg_id: '" + revRegId + "'," +
+                "  cred_rev_id: '" + credRevId + "'," +
+                "  publish: true" +
+                "}").jsonString();
+        String response =  requestPOST(agentApiUrl + "/revocation/revoke", walletName, body);
+        log.info("response: " + response);
     }
 
     public byte[] generateQRCode(String text, int width, int height) {
