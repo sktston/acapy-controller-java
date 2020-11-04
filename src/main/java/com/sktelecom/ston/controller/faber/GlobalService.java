@@ -9,7 +9,6 @@ import com.google.zxing.common.BitMatrix;
 import com.jayway.jsonpath.JsonPath;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import okhttp3.HttpUrl;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -30,7 +29,7 @@ import static com.sktelecom.ston.controller.utils.Common.*;
 public class GlobalService {
     // agent configurations
     final String agentApiUrl = "http://localhost:8021";
-    final String adminWalletName = "admin"; // admin wallet name when agent starts
+    final String baseWalletName = "base"; // base wallet name when agent starts
 
     // controller configurations
     @Value("${controllerUrl}")
@@ -152,7 +151,7 @@ public class GlobalService {
                 "  webhook_urls: ['" + webhookUrl + "']" +
                 "}").jsonString();
         log.info("Create a new wallet:" + prettyJson(body));
-        String response = requestPOST(agentApiUrl + "/wallet", adminWalletName, body);
+        String response = requestPOST(agentApiUrl + "/wallet", "", body);
         log.info("response:" + prettyJson(response));
 
         body = JsonPath.parse("{ seed: '" + seed + "'}").jsonString();
@@ -170,8 +169,8 @@ public class GlobalService {
                 "&role=ENDORSER" +
                 "&target_wallet=" + walletName;
         log.info("Register the did to the ledger as a ENDORSER");
-        // did of admin wallet must have STEWARD role
-        String response = requestPOST(agentApiUrl + "/ledger/register-nym" + params, adminWalletName, "{}");
+        // did of base wallet must have STEWARD role
+        String response = requestPOST(agentApiUrl + "/ledger/register-nym" + params, baseWalletName, "{}");
         log.info("response: " + response);
 
         params = "?did=" + did;

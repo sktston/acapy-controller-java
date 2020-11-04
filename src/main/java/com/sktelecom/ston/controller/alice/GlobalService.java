@@ -18,7 +18,6 @@ import static com.sktelecom.ston.controller.utils.Common.*;
 public class GlobalService {
     // agent configurations
     final String agentApiUrl = "http://localhost:8021";
-    final String adminWalletName = "admin"; // admin wallet name when agent starts
 
     // controller configurations
     @Value("${controllerUrl}")
@@ -108,7 +107,7 @@ public class GlobalService {
                 "  webhook_urls: ['" + webhookUrl + "']" +
                 "}").jsonString();
         log.info("Create a new wallet:" + prettyJson(body));
-        String response = requestPOST(agentApiUrl + "/wallet", adminWalletName, body);
+        String response = requestPOST(agentApiUrl + "/wallet", "", body);
         log.info("response:" + prettyJson(response));
 
         body = JsonPath.parse("{ seed: '" + seed + "'}").jsonString();
