@@ -167,7 +167,7 @@ public class GlobalService {
                 "&verkey=" + verkey +
                 "&alias=" + walletName +
                 "&role=ENDORSER" +
-                "&target_wallet=" + walletName;
+                "&wallet_name=" + walletName;
         log.info("Register the did to the ledger as a ENDORSER");
         // did of base wallet must have STEWARD role
         String response = requestPOST(agentApiUrl + "/ledger/register-nym" + params, baseWalletName, "{}");

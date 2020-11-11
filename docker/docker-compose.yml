@@ -3,15 +3,13 @@ version: '3'
 services:
   acapy-agent:
     build:
-      context: https://github.com/sktston/aries-cloudagent-python.git#develop
+      context: https://github.com/baegjae/aries-cloudagent-python.git#features_per_wallet
       dockerfile: ./docker/Dockerfile.run
     ports:
       - 8020-8021:8020-8021
     networks:
       - acapy
-    depends_on:
-      - postgres
-    entrypoint: ["./wait-for-it.sh", "postgres:5432", "--", "aca-py",
+    entrypoint: ["aca-py",
                  "start",
                  "--admin", "0.0.0.0", "8021",
                  "--admin-insecure-mode",
@@ -26,9 +24,6 @@ services:
                  "--wallet-type", "indy",
                  "--wallet-name", "base",
                  "--wallet-key", "base.key",
-                 "--wallet-storage-type", "postgres_storage",
-                 "--wallet-storage-config", "{\"url\":\"postgres:5432\",\"wallet_scheme\":\"MultiWalletSingleTableSharedPool\"}",
-                 "--wallet-storage-creds", "{\"account\":\"postgres\",\"password\":\"mysecretpassword\",\"admin_account\":\"postgres\",\"admin_password\":\"mysecretpassword\"}",
                  "--auto-accept-invites",
                  "--auto-accept-requests",
                  "--auto-ping-connection",
@@ -43,15 +38,6 @@ services:
                  "--trace-tag", "agent.events",
                  "--trace-label", "agent.trace",
                  "--plugin", "aries_cloudagent.wallet_handler"]
-
-  postgres:
-    image: postgres
-    environment:
-      - POSTGRES_PASSWORD=mysecretpassword
-    ports:
-      - '5432:5432'
-    networks:
-      - acapy
 
 networks:
   acapy:
