@@ -3,7 +3,7 @@ version: '3'
 services:
   acapy-agent:
     build:
-      context: https://github.com/baegjae/aries-cloudagent-python.git#features_per_wallet
+      context: https://github.com/sktston/aries-cloudagent-python.git#develop
       dockerfile: ./docker/Dockerfile.run
     ports:
       - 8020-8021:8020-8021
