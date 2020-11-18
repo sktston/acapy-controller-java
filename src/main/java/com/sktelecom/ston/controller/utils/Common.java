@@ -9,6 +9,7 @@ import okhttp3.*;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @RequiredArgsConstructor
@@ -22,8 +23,11 @@ public class Common {
     public static int getRandomInt(int min, int max) {
         if (min >= max)
             throw new IllegalArgumentException("max must be greater than min");
-        Random r = new Random();
-        return r.nextInt((max - min) + 1) + min;
+        return ThreadLocalRandom.current().nextInt(min, max);
+    }
+
+    public static String randomStr(String[] strings) {
+        return strings[getRandomInt(0, strings.length)];
     }
 
     static OkHttpClient getClient(int timeout) {

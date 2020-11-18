@@ -17,19 +17,18 @@ import static com.sktelecom.ston.controller.utils.Common.*;
 @Slf4j
 public class GlobalService {
     // agent configurations
-    final String agentApiUrl = "http://localhost:8021";
+    final String[] apiUrls = {"http://localhost:8021"};
+    //final String[] apiUrls = {"http://localhost:8021", "http://localhost:8031"}; // with docker-compose-multi.yml
+    int iterations = 1; // for long-term test
 
     // controller configurations
     @Value("${controllerUrl}")
     private String controllerUrl; // FIXME: adjust url in application-alice.properties
 
-    final String version = getRandomInt(1, 99) + "." + getRandomInt(1, 99) + "." + getRandomInt(1, 99); // for randomness
-    final String walletName = "alice." + version; // new walletName
-    final String imageUrl = "https://identicon-api.herokuapp.com/" + walletName + "/300?format=png";
-    final String seed = UUID.randomUUID().toString().replaceAll("-", ""); // random seed 32 characters
+    String version; // for randomness
+    String walletName; // new walletName
+    String imageUrl;
     String webhookUrl; // url to receive webhook messagess
-    String did; // did
-    String verkey; // verification key
 
     // faber configuration
     @Value("${faberControllerUrl}")
@@ -37,15 +36,7 @@ public class GlobalService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
-        log.info("Create wallet and did, and register webhook url");
-        createWalletAndDid();
-
-        log.info("Configuration of alice:");
-        log.info("- wallet name: " + walletName);
-        log.info("- seed: " + seed);
-        log.info("- did: " + did);
-        log.info("- verification key: " + verkey);
-        log.info("- webhook url: " + webhookUrl);
+        provisionController();
 
         log.info("Receive invitation from faber controller");
         receiveInvitation();
@@ -96,8 +87,20 @@ public class GlobalService {
         }
     }
 
-    public void createWalletAndDid() {
+    public void provisionController() {
+        log.info("Create wallet and did, and register webhook url");
+        version = getRandomInt(1, 100) + "." + getRandomInt(1, 100) + "." + getRandomInt(1, 100);
+        walletName = "alice." + version;
+        imageUrl = "https://identicon-api.herokuapp.com/" + walletName + "/300?format=png";
         webhookUrl = controllerUrl + "/webhooks";
+        createWallet();
+
+        log.info("Configuration of alice:");
+        log.info("- wallet name: " + walletName);
+        log.info("- webhook url: " + webhookUrl);
+    }
+
+    public void createWallet() {
         String body = JsonPath.parse("{" +
                 "  name: '" + walletName + "'," +
                 "  key: '" + walletName + ".key'," +
@@ -107,30 +110,23 @@ public class GlobalService {
                 "  webhook_urls: ['" + webhookUrl + "']" +
                 "}").jsonString();
         log.info("Create a new wallet:" + prettyJson(body));
-        String response = requestPOST(agentApiUrl + "/wallet", "", body);
+        String response = requestPOST(randomStr(apiUrls) + "/wallet", "", body);
         log.info("response:" + prettyJson(response));
-
-        body = JsonPath.parse("{ seed: '" + seed + "'}").jsonString();
-        log.info("Create a new local did:" + prettyJson(body));
-        response = requestPOST(agentApiUrl + "/wallet/did/create", walletName, body);
-        did = JsonPath.read(response, "$.result.did");
-        verkey = JsonPath.read(response, "$.result.verkey");
-        log.info("created did: " + did + ", verkey: " + verkey);
     }
 
     public void receiveInvitation() {
         String invitation = requestGET(faberControllerUrl + "/invitation", "");
         log.info("invitation:" + invitation);
-        String response = requestPOST(agentApiUrl + "/connections/receive-invitation", walletName, invitation);
+        String response = requestPOST(randomStr(apiUrls) + "/connections/receive-invitation", walletName, invitation);
     }
 
     public void sendCredentialRequest(String credExId) {
-        String response = requestPOST(agentApiUrl + "/issue-credential/records/" + credExId + "/send-request", walletName, "{}");
+        String response = requestPOST(randomStr(apiUrls) + "/issue-credential/records/" + credExId + "/send-request", walletName, "{}");
     }
 
     public void sendProof(String reqBody) {
         String presExId = JsonPath.read(reqBody, "$.presentation_exchange_id");
-        String response = requestGET(agentApiUrl + "/present-proof/records/" + presExId + "/credentials", walletName);
+        String response = requestGET(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/credentials", walletName);
 
         ArrayList<LinkedHashMap<String, Object>> credentials = JsonPath.read(response, "$");
         int credRevId = 0;
@@ -164,20 +160,29 @@ public class GlobalService {
                 .put("$", "requested_predicates", reqPreds)
                 .put("$", "self_attested_attributes", selfAttrs).jsonString();
 
-        response = requestPOST(agentApiUrl + "/present-proof/records/" + presExId + "/send-presentation", walletName, body);
+        response = requestPOST(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/send-presentation", walletName, body);
     }
 
     public void deleteWallet() {
         log.info("Delete my wallet - walletName: " + walletName);
-        String response = requestDELETE(agentApiUrl + "/wallet/me", walletName);
+        String response = requestDELETE(randomStr(apiUrls) + "/wallet/me", walletName);
     }
 
     public void deleteWalletAndExit() {
         TimerTask task = new TimerTask() {
             public void run() {
                 deleteWallet();
-                log.info("Alice demo completes");
-                System.exit(0);
+                if (--iterations == 0) {
+                    log.info("Alice demo completes - Exit");
+                    System.exit(0);
+                }
+                else {
+                    log.info("Remaining iterations : " + iterations);
+                    provisionController();
+
+                    log.info("Receive invitation from faber controller");
+                    receiveInvitation();
+                }
             }
         };
         Timer timer = new Timer("Timer");

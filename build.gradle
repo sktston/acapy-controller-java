@@ -53,3 +53,21 @@ task alice(type:JavaExec) {
     main = 'com.sktelecom.ston.controller.alice.Application'
     args(['--spring.config.location=classpath:/application-alice.properties'])
 }
+task alice2(type:JavaExec) {
+    group 'application'
+    classpath sourceSets.main.runtimeClasspath
+    main = 'com.sktelecom.ston.controller.alice.Application'
+    args(['--spring.config.location=classpath:/application-alice2.properties'])
+}
+task alice3(type:JavaExec) {
+    group 'application'
+    classpath sourceSets.main.runtimeClasspath
+    main = 'com.sktelecom.ston.controller.alice.Application'
+    args(['--spring.config.location=classpath:/application-alice3.properties'])
+}
+task alice4(type:JavaExec) {
+    group 'application'
+    classpath sourceSets.main.runtimeClasspath
+    main = 'com.sktelecom.ston.controller.alice.Application'
+    args(['--spring.config.location=classpath:/application-alice4.properties'])
+}

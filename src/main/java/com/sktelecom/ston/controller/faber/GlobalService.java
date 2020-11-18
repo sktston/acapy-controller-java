@@ -28,18 +28,19 @@ import static com.sktelecom.ston.controller.utils.Common.*;
 @Slf4j
 public class GlobalService {
     // agent configurations
-    final String agentApiUrl = "http://localhost:8021";
+    final String[] apiUrls = {"http://localhost:8021"};
+    //final String[] apiUrls = {"http://localhost:8021", "http://localhost:8031"}; // with docker-compose-multi.yml
     final String baseWalletName = "base"; // base wallet name when agent starts
 
     // controller configurations
     @Value("${controllerUrl}")
     private String controllerUrl; // FIXME: adjust url in application-faber.properties
 
-    final String version = getRandomInt(1, 99) + "." + getRandomInt(1, 99) + "." + getRandomInt(1, 99); // for randomness
-    final String walletName = "faber." + version; // new walletName
-    final String imageUrl = "https://identicon-api.herokuapp.com/" + walletName + "/300?format=png";
-    final String seed = UUID.randomUUID().toString().replaceAll("-", ""); // random seed 32 characters
-    String webhookUrl; // url to receive webhook messages
+    String version; // for randomness
+    String walletName; // new walletName
+    String imageUrl;
+    String seed; // random seed 32 characters
+    String webhookUrl; // url to receive webhook messagess
     String did; // did
     String verkey; // verification key
     String schemaId; // schema identifier
@@ -50,37 +51,18 @@ public class GlobalService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
-        log.info("Create wallet and did, and register webhook url");
-        createWalletAndDid();
-        log.info("Register did as issuer");
-        registerDidAsIssuer();
-
-        log.info("Create schema and credential definition");
-        createSchema();
-        createCredentialDefinition();
-
-        log.info("Configuration of faber:");
-        log.info("- wallet name: " + walletName);
-        log.info("- seed: " + seed);
-        log.info("- did: " + did);
-        log.info("- verification key: " + verkey);
-        log.info("- webhook url: " + webhookUrl);
-        log.info("- schema ID: " + schemaId);
-        log.info("- credential definition ID: " + credDefId);
-
-        log.info("Initialization is done.");
-        log.info("Run alice now.");
+        provisionController();
     }
 
     public String createInvitation() {
-        String response = requestPOST(agentApiUrl + "/connections/create-invitation", walletName, "{}");
+        String response = requestPOST(randomStr(apiUrls) + "/connections/create-invitation", walletName, "{}");
         String invitation = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation")).jsonString();
         log.info("createInvitation <<< invitation:" + invitation);
         return invitation;
     }
 
     public String createInvitationUrl() {
-        String response = requestPOST(agentApiUrl + "/connections/create-invitation", walletName, "{}");
+        String response = requestPOST(randomStr(apiUrls) + "/connections/create-invitation", walletName, "{}");
         String invitationUrl = JsonPath.read(response, "$.invitation_url");
         log.info("createInvitationUrl <<< invitationUrl:" + invitationUrl);
         return invitationUrl;
@@ -140,8 +122,34 @@ public class GlobalService {
         }
     }
 
-    public void createWalletAndDid() {
+    public void provisionController() {
+        log.info("Create wallet and did, and register webhook url");
+        version = getRandomInt(1, 100) + "." + getRandomInt(1, 100) + "." + getRandomInt(1, 100);
+        walletName = "faber." + version;
+        imageUrl = "https://identicon-api.herokuapp.com/" + walletName + "/300?format=png";
+        seed = UUID.randomUUID().toString().replaceAll("-", "");
         webhookUrl = controllerUrl + "/webhooks";
+        createWalletAndDid();
+        log.info("Register did as issuer");
+        registerDidAsIssuer();
+
+        log.info("Create schema and credential definition");
+        createSchema();
+        createCredentialDefinition();
+
+        log.info("Configuration of faber:");
+        log.info("- wallet name: " + walletName);
+        log.info("- seed: " + seed);
+        log.info("- did: " + did);
+        log.info("- verification key: " + verkey);
+        log.info("- webhook url: " + webhookUrl);
+        log.info("- schema ID: " + schemaId);
+        log.info("- credential definition ID: " + credDefId);
+
+        log.info("Initialization is done.");
+        log.info("Run alice now.");
+    }
+    public void createWalletAndDid() {
         String body = JsonPath.parse("{" +
                 "  name: '" + walletName + "'," +
                 "  key: '" + walletName + ".key'," +
@@ -151,12 +159,12 @@ public class GlobalService {
                 "  webhook_urls: ['" + webhookUrl + "']" +
                 "}").jsonString();
         log.info("Create a new wallet:" + prettyJson(body));
-        String response = requestPOST(agentApiUrl + "/wallet", "", body);
+        String response = requestPOST(randomStr(apiUrls) + "/wallet", "", body);
         log.info("response:" + prettyJson(response));
 
         body = JsonPath.parse("{ seed: '" + seed + "'}").jsonString();
         log.info("Create a new local did:" + prettyJson(body));
-        response = requestPOST(agentApiUrl + "/wallet/did/create", walletName, body);
+        response = requestPOST(randomStr(apiUrls) + "/wallet/did/create", walletName, body);
         did = JsonPath.read(response, "$.result.did");
         verkey = JsonPath.read(response, "$.result.verkey");
         log.info("created did: " + did + ", verkey: " + verkey);
@@ -170,12 +178,12 @@ public class GlobalService {
                 "&wallet_name=" + walletName;
         log.info("Register the did to the ledger as a ENDORSER");
         // did of base wallet must have STEWARD role
-        String response = requestPOST(agentApiUrl + "/ledger/register-nym" + params, baseWalletName, "{}");
+        String response = requestPOST(randomStr(apiUrls) + "/ledger/register-nym" + params, baseWalletName, "{}");
         log.info("response: " + response);
 
         params = "?did=" + did;
         log.info("Assign the did to public: " + did);
-        response = requestPOST(agentApiUrl + "/wallet/did/public" + params, walletName, "{}");
+        response = requestPOST(randomStr(apiUrls) + "/wallet/did/public" + params, walletName, "{}");
         log.info("response: " + response);
     }
 
@@ -186,7 +194,7 @@ public class GlobalService {
                 "  attributes: ['name', 'date', 'degree', 'age']" +
                 "}").jsonString();
         log.info("Create a new schema on the ledger:" + prettyJson(body));
-        String response = requestPOST(agentApiUrl + "/schemas", walletName, body);
+        String response = requestPOST(randomStr(apiUrls) + "/schemas", walletName, body);
         schemaId = JsonPath.read(response, "$.schema_id");
     }
 
@@ -198,7 +206,7 @@ public class GlobalService {
                 "  revocation_registry_size: 10" +
                 "}").jsonString();
         log.info("Create a new credential definition on the ledger:" + prettyJson(body));
-        String response = requestPOST(agentApiUrl + "/credential-definitions", walletName, body);
+        String response = requestPOST(randomStr(apiUrls) + "/credential-definitions", walletName, body);
         credDefId = JsonPath.read(response, "$.credential_definition_id");
     }
 
@@ -216,7 +224,7 @@ public class GlobalService {
                 "    ]" +
                 "  }" +
                 "}").jsonString();
-        String response = requestPOST(agentApiUrl + "/issue-credential/send-offer", walletName, body);
+        String response = requestPOST(randomStr(apiUrls) + "/issue-credential/send-offer", walletName, body);
     }
 
     public void sendProofRequest(String connectionId) {
@@ -251,7 +259,7 @@ public class GlobalService {
                 "    non_revoked: { to: " + curUnixTime + " }" +
                 "  }" +
                 "}").jsonString();
-        String response = requestPOST(agentApiUrl + "/present-proof/send-request", walletName, body);
+        String response = requestPOST(randomStr(apiUrls) + "/present-proof/send-request", walletName, body);
     }
 
     public void printProofResult(String body) {
@@ -268,7 +276,7 @@ public class GlobalService {
                 "  cred_rev_id: '" + credRevId + "'," +
                 "  publish: true" +
                 "}").jsonString();
-        String response =  requestPOST(agentApiUrl + "/revocation/revoke", walletName, body);
+        String response =  requestPOST(randomStr(apiUrls) + "/revocation/revoke", walletName, body);
         log.info("response: " + response);
     }
 
