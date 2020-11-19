@@ -34,8 +34,13 @@ public class GlobalService {
     @Value("${faberControllerUrl}")
     private String faberControllerUrl; // FIXME: adjust url in application-alice.properties
 
+    // time calc
+    long beforeTime;
+    long afterTime;
+
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
+        beforeTime = System.currentTimeMillis();
         provisionController();
 
         log.info("Receive invitation from faber controller");
@@ -174,6 +179,9 @@ public class GlobalService {
                 deleteWallet();
                 if (--iterations == 0) {
                     log.info("Alice demo completes - Exit");
+                    afterTime = System.currentTimeMillis();
+                    long secDiffTime = afterTime - beforeTime;
+                    log.info("Elapsed time (ms) : " + secDiffTime);
                     System.exit(0);
                 }
                 else {
