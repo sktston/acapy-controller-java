@@ -160,7 +160,7 @@ public class GlobalService {
                 "}").jsonString();
         log.info("Create a new wallet:" + prettyJson(body));
         String response = requestPOST(randomStr(apiUrls) + "/wallet", "", body);
-        log.info("response:" + prettyJson(response));
+        log.info("response:" + response);
 
         body = JsonPath.parse("{ seed: '" + seed + "'}").jsonString();
         log.info("Create a new local did:" + prettyJson(body));

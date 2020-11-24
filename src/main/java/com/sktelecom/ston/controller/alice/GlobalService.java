@@ -116,7 +116,7 @@ public class GlobalService {
                 "}").jsonString();
         log.info("Create a new wallet:" + prettyJson(body));
         String response = requestPOST(randomStr(apiUrls) + "/wallet", "", body);
-        log.info("response:" + prettyJson(response));
+        log.info("response:" + response);
     }
 
     public void receiveInvitation() {
