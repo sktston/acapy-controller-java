@@ -30,7 +30,8 @@ public class Common {
         return strings[getRandomInt(0, strings.length)];
     }
 
-    static OkHttpClient getClient(int timeout) {
+    static OkHttpClient getClient() {
+        int timeout = 3600; // 1 hour
         return new OkHttpClient.Builder()
                 .writeTimeout(timeout, TimeUnit.SECONDS)
                 .readTimeout(timeout, TimeUnit.SECONDS)
@@ -40,7 +41,7 @@ public class Common {
     }
 
     public static String requestGET(String url, String walletName) {
-        OkHttpClient client = getClient(60);
+        OkHttpClient client = getClient();
         Request request = new Request.Builder()
                 .url(url)
                 .get()
@@ -56,7 +57,7 @@ public class Common {
     }
 
     public static String requestPOST(String url, String walletName, String json) {
-        OkHttpClient client = getClient(60);
+        OkHttpClient client = getClient();
         Request request = new Request.Builder()
                 .url(url)
                 .post(RequestBody.create(json, MediaType.parse("application/json")))
@@ -72,7 +73,7 @@ public class Common {
     }
 
     public static String requestPUT(String url, String walletName, String json) {
-        OkHttpClient client = getClient(60);
+        OkHttpClient client = getClient();
         Request request = new Request.Builder()
                 .url(url)
                 .put(RequestBody.create(json, MediaType.parse("application/json")))
@@ -88,7 +89,7 @@ public class Common {
     }
 
     public static String requestDELETE(String url, String walletName) {
-        OkHttpClient client = getClient(60);
+        OkHttpClient client = getClient();
         Request request = new Request.Builder()
                 .url(url)
                 .delete()
@@ -104,7 +105,7 @@ public class Common {
     }
 
     public static String requestPATCH(String url, String walletName, String json) {
-        OkHttpClient client = getClient(60);
+        OkHttpClient client = getClient();
         Request request = new Request.Builder()
                 .url(url)
                 .patch(RequestBody.create(json, MediaType.parse("application/json")))
@@ -120,7 +121,7 @@ public class Common {
     }
 
     public static byte[] requestGETtoBytes(String url, String walletName) {
-        OkHttpClient client = getClient(60);
+        OkHttpClient client = getClient();
         Request request = new Request.Builder()
                 .url(url)
                 .get()
