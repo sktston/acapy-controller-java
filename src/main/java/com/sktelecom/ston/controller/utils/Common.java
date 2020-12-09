@@ -9,6 +9,7 @@ import okhttp3.*;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @RequiredArgsConstructor
@@ -22,17 +23,21 @@ public class Common {
     public static int getRandomInt(int min, int max) {
         if (min >= max)
             throw new IllegalArgumentException("max must be greater than min");
-        Random r = new Random();
-        return r.nextInt((max - min) + 1) + min;
+        return ThreadLocalRandom.current().nextInt(min, max);
+    }
+
+    static OkHttpClient getClient() {
+        int timeout = 3600; // 1 hour
+        return new OkHttpClient.Builder()
+                .writeTimeout(timeout, TimeUnit.SECONDS)
+                .readTimeout(timeout, TimeUnit.SECONDS)
+                .connectTimeout(timeout, TimeUnit.SECONDS)
+                .callTimeout(timeout, TimeUnit.SECONDS)
+                .build();
     }
 
     public static String requestGET(String url) {
-        OkHttpClient client = new OkHttpClient.Builder()
-                .writeTimeout(60, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .connectTimeout(60, TimeUnit.SECONDS)
-                .callTimeout(60, TimeUnit.SECONDS)
-                .build();
+        OkHttpClient client = getClient();
         Request request = new Request.Builder()
                 .url(url)
                 .get()
@@ -47,12 +52,7 @@ public class Common {
     }
 
     public static String requestPOST(String url, String json) {
-        OkHttpClient client = new OkHttpClient.Builder()
-                .writeTimeout(60, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .connectTimeout(60, TimeUnit.SECONDS)
-                .callTimeout(60, TimeUnit.SECONDS)
-                .build();
+        OkHttpClient client = getClient();
         Request request = new Request.Builder()
                 .url(url)
                 .post(RequestBody.create(json, MediaType.parse("application/json")))

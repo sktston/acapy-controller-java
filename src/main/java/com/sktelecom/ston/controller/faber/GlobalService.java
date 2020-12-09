@@ -18,7 +18,7 @@ import static com.sktelecom.ston.controller.utils.Common.*;
 public class GlobalService {
     final String agentApiUrl = "http://localhost:8021";
 
-    final String version = getRandomInt(1, 99) + "." + getRandomInt(1, 99) + "." + getRandomInt(1, 99); // for randomness
+    final String version = getRandomInt(1, 100) + "." + getRandomInt(1, 100) + "." + getRandomInt(1, 100); // for randomness
     String schemaId; // schema identifier
     String credDefId; // credential definition identifier
 
