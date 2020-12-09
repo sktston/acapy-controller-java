@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import static com.sktelecom.ston.controller.utils.Common.*;
 
@@ -48,6 +50,10 @@ public class GlobalService {
                 if (state.equals("request_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProof");
                     sendProof(body);
+                }
+                else if (state.equals("presentation_acked")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> delayedExit");
+                    delayedExit();
                 }
                 else {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
@@ -117,4 +123,14 @@ public class GlobalService {
         response = requestPOST(agentApiUrl + "/present-proof/records/" + presExId + "/send-presentation", body);
     }
 
+    public void delayedExit() {
+        TimerTask task = new TimerTask() {
+            public void run() {
+                log.info("Alice demo completes - Exit");
+                System.exit(0);
+            }
+        };
+        Timer timer = new Timer("Timer");
+        timer.schedule(task, 100L);
+    }
 }
