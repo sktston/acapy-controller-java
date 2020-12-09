@@ -37,7 +37,8 @@ services:
                  "--trace",
                  "--trace-target", "log",
                  "--trace-tag", "acapy.events",
-                 "--trace-label", "faber.agent.trace"]
+                 "--trace-label", "faber.agent.trace",
+                 "--auto-provision"]
 
   acapy-alice-agent:
     build:
@@ -75,7 +76,8 @@ services:
                  "--trace",
                  "--trace-target", "log",
                  "--trace-tag", "acapy.events",
-                 "--trace-label", "alice.agent.trace"]
+                 "--trace-label", "alice.agent.trace",
+                 "--auto-provision"]
 
 networks:
   acapy:
