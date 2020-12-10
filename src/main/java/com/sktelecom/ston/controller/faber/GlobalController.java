@@ -19,6 +19,11 @@ public class GlobalController {
         return globalService.createInvitation();
     }
 
+    @GetMapping("/oob-invitation")
+    public String oobInvitationHandler() {
+        return globalService.createOutOfBandInvitation();
+    }
+
     @GetMapping("/invitation-url")
     public String invitationUrlHandler() {
         return globalService.createInvitationUrl();

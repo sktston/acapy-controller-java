@@ -21,10 +21,16 @@ public class GlobalService {
     final String agentApiUrl = "http://localhost:8031";
     final String faberContUrl = "http://localhost:8022";
 
+    // check options
+    static boolean enableOob = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_OOB", "false"));
+
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
         log.info("Receive invitation from faber controller");
-        receiveInvitation();
+        if (enableOob)
+            receiveOobInvitation();
+        else
+            receiveInvitation();
     }
 
     public void handleMessage(String topic, String body) {
@@ -78,6 +84,14 @@ public class GlobalService {
         log.info("invitation:" + invitation);
         String response = requestPOST(agentApiUrl + "/connections/receive-invitation", invitation);
         log.info("receiveInvitation <<<");
+    }
+
+    public void receiveOobInvitation() {
+        log.info("receiveOobInvitation >>>");
+        String invitation = requestGET(faberContUrl + "/oob-invitation");
+        log.info("oob-invitation:" + invitation);
+        String response = requestPOST(agentApiUrl + "/didexchange/receive-invitation", invitation);
+        log.info("receiveOobInvitation <<<");
     }
 
     public void sendCredentialRequest(String credExId) {

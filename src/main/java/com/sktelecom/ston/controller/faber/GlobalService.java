@@ -47,6 +47,14 @@ public class GlobalService {
         return invitation;
     }
 
+    public String createOutOfBandInvitation() {
+        log.info("createOutOfBandInvitation >>>");
+        String response = requestPOST(agentApiUrl + "/out-of-band/create-invitation", "{\"include_handshake\": true}");
+        String invitation = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation")).jsonString();
+        log.info("createOutOfBandInvitation <<< invitation:" + invitation);
+        return invitation;
+    }
+
     public String createInvitationUrl() {
         log.info("createInvitationUrl >>>");
         String response = requestPOST(agentApiUrl + "/connections/create-invitation", "{}");
@@ -98,6 +106,8 @@ public class GlobalService {
                 log.info("  - message:" + JsonPath.read(body, "$.content"));
                 break;
             case "revocation_registry":
+            case "oob-invitation":
+            case "issuer_cred_rev":
                 log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
                 break;
             case "problem_report":
