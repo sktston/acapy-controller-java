@@ -23,9 +23,12 @@ public class GlobalService {
 
     // check options
     static boolean enableOob = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_OOB", "false"));
+    static boolean observeMode = Boolean.parseBoolean(System.getenv().getOrDefault("OBSERVE_MODE", "false"));
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
+        if (observeMode)
+            return;
         log.info("Receive invitation from faber controller");
         if (enableOob)
             receiveOobInvitation();
@@ -37,6 +40,10 @@ public class GlobalService {
         log.info("handleMessage >>> topic:" + topic + ", body:" + body);
 
         String state = topic.equals("problem_report") ? null : JsonPath.read(body, "$.state");
+        if (observeMode) {
+            log.info("- Case (topic:" + topic + ", state:" + state + ")");
+            return;
+        }
         switch(topic) {
             case "connections":
                 log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");

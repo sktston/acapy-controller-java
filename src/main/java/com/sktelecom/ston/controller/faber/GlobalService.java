@@ -24,9 +24,12 @@ public class GlobalService {
 
     // check options
     static boolean enableRevoke = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_REVOKE", "false"));
+    static boolean observeMode = Boolean.parseBoolean(System.getenv().getOrDefault("OBSERVE_MODE", "false"));
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
+        if (observeMode)
+            return;
         log.info("Create schema and credential definition");
         createSchema();
         createCredentialDefinition();
@@ -67,6 +70,10 @@ public class GlobalService {
         log.info("handleMessage >>> topic:" + topic + ", body:" + body);
 
         String state = topic.equals("problem_report") ? null : JsonPath.read(body, "$.state");
+        if (observeMode) {
+            log.info("- Case (topic:" + topic + ", state:" + state + ")");
+            return;
+        }
         switch(topic) {
             case "connections":
                 // When connection with alice is done, send credential offer
