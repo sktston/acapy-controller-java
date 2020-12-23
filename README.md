@@ -18,16 +18,16 @@ Check admin http://localhost:8031
 ```
 ./gradlew faber
 ```
-Faber controller opens 8022 port. \
-It receives webhook message from faber agent by POST http://localhost:8022/webhooks/topic/{topic}/ \
-Also, It presents invitation by GET http://localhost:8022/invitation
+Faber controller opens 8040 port. \
+It receives webhook message from faber agent by POST http://localhost:8040/webhooks/topic/{topic}/ \
+Also, It presents invitation by GET http://localhost:8040/invitation
 
 - Run Alice Controller (Run with the faber running)
 ```
 ./gradlew alice
 ```
-Alice controller opens 8032 port. \
-It receives webhook message from alice agent by POST http://localhost:8032/webhooks/topic/{topic}/ \
+Alice controller opens 8041 port. \
+It receives webhook message from alice agent by POST http://localhost:8041/webhooks/topic/{topic}/ \
 When alice controller starts, it gets invitation from faber controller and proceeds connection, credential and proof(presentation) sequentially.
 
 ### Advanced user guide
@@ -53,7 +53,7 @@ It is the endpoint of invitation for receiving messages from other agents (e.g.,
 
 - Get invitation_url from faber
 
-GET http://localhost:8022/invitation-url
+GET http://localhost:8040/invitation-url
 
 ### Demo flow (API-based description)
 | Category | Faber Controller (topic, state) | Faber Agent | Alice Agent | Alice controller (topic, state) | Tails Server | can skip (bold enabled) |
