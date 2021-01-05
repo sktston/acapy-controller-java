@@ -37,9 +37,10 @@ public class GlobalService {
     private String controllerUrl; // FIXME: adjust url in application-faber.properties
 
     String version; // for randomness
-    String walletName; // new walletName
+    String walletName; // new wallet name
+    String walletId; // new wallet id
+    String jwtToken; // jwt token for wallet
     String imageUrl;
-    String seed; // random seed 32 characters
     String webhookUrl; // url to receive webhook messagess
     String did; // did
     String verkey; // verification key
@@ -127,7 +128,6 @@ public class GlobalService {
         version = getRandomInt(1, 100) + "." + getRandomInt(1, 100) + "." + getRandomInt(1, 100);
         walletName = "faber." + version;
         imageUrl = "https://identicon-api.herokuapp.com/" + walletName + "/300?format=png";
-        seed = UUID.randomUUID().toString().replaceAll("-", "");
         webhookUrl = controllerUrl + "/webhooks";
         createWalletAndDid();
         log.info("Register did as issuer");
@@ -139,7 +139,6 @@ public class GlobalService {
 
         log.info("Configuration of faber:");
         log.info("- wallet name: " + walletName);
-        log.info("- seed: " + seed);
         log.info("- did: " + did);
         log.info("- verification key: " + verkey);
         log.info("- webhook url: " + webhookUrl);
@@ -151,23 +150,28 @@ public class GlobalService {
     }
     public void createWalletAndDid() {
         String body = JsonPath.parse("{" +
-                "  name: '" + walletName + "'," +
-                "  key: '" + walletName + ".key'," +
-                "  type: 'indy'," +
+                "  wallet_name: '" + walletName + "'," +
+                "  wallet_key: '" + walletName + ".key'," +
+                "  wallet_type: 'indy'," +
                 "  label: '" + walletName + ".label'," +
-                "  image_url: '" + imageUrl + "'," +
-                "  webhook_urls: ['" + webhookUrl + "']" +
+                "  key_management_mode: 'managed'" +
+                //"  image_url: '" + imageUrl + "'," +
+                //"  webhook_urls: ['" + webhookUrl + "']" +
                 "}").jsonString();
         log.info("Create a new wallet:" + prettyJson(body));
-        String response = requestPOST(randomStr(apiUrls) + "/wallet", "", body);
+        String response = requestPOST(randomStr(apiUrls) + "/multitenancy/wallet", null, body);
         log.info("response:" + response);
 
-        body = JsonPath.parse("{ seed: '" + seed + "'}").jsonString();
-        log.info("Create a new local did:" + prettyJson(body));
-        response = requestPOST(randomStr(apiUrls) + "/wallet/did/create", walletName, body);
+        walletId = JsonPath.read(response, "$.settings.['wallet.id']");
+        jwtToken = JsonPath.read(response, "$.token");
+
+        log.info("Create a new local did");
+        response = requestPOST(randomStr(apiUrls) + "/wallet/did/create", jwtToken, "{}");
+        log.info("response:" + response);
         did = JsonPath.read(response, "$.result.did");
         verkey = JsonPath.read(response, "$.result.verkey");
         log.info("created did: " + did + ", verkey: " + verkey);
+        System.exit(0);
     }
 
     public void registerDidAsIssuer() {

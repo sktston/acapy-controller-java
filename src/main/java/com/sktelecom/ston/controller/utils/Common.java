@@ -40,13 +40,19 @@ public class Common {
                 .build();
     }
 
-    public static String requestGET(String url, String walletName) {
+    static Request addToken(Request request, String token) {
+        if (token != null && !token.equals(""))
+            request = request.newBuilder().addHeader("Authorization", "Bearer " + token).build();
+        return request;
+    }
+
+    public static String requestGET(String url, String token) {
         OkHttpClient client = getClient();
         Request request = new Request.Builder()
                 .url(url)
                 .get()
-                .addHeader("Wallet", walletName)
                 .build();
+        request = addToken(request, token);
         try {
             Response response = client.newCall(request).execute();
             return response.body().string();
@@ -56,13 +62,13 @@ public class Common {
         return null;
     }
 
-    public static String requestPOST(String url, String walletName, String json) {
+    public static String requestPOST(String url, String token, String json) {
         OkHttpClient client = getClient();
         Request request = new Request.Builder()
                 .url(url)
                 .post(RequestBody.create(json, MediaType.parse("application/json")))
-                .addHeader("Wallet", walletName)
                 .build();
+        request = addToken(request, token);
         try {
             Response response = client.newCall(request).execute();
             return response.body().string();
@@ -72,13 +78,13 @@ public class Common {
         return null;
     }
 
-    public static String requestPUT(String url, String walletName, String json) {
+    public static String requestPUT(String url, String token, String json) {
         OkHttpClient client = getClient();
         Request request = new Request.Builder()
                 .url(url)
                 .put(RequestBody.create(json, MediaType.parse("application/json")))
-                .addHeader("Wallet", walletName)
                 .build();
+        request = addToken(request, token);
         try {
             Response response = client.newCall(request).execute();
             return response.body().string();
@@ -88,13 +94,13 @@ public class Common {
         return null;
     }
 
-    public static String requestDELETE(String url, String walletName) {
+    public static String requestDELETE(String url, String token) {
         OkHttpClient client = getClient();
         Request request = new Request.Builder()
                 .url(url)
                 .delete()
-                .addHeader("Wallet", walletName)
                 .build();
+        request = addToken(request, token);
         try {
             Response response = client.newCall(request).execute();
             return response.body().string();
@@ -104,13 +110,13 @@ public class Common {
         return null;
     }
 
-    public static String requestPATCH(String url, String walletName, String json) {
+    public static String requestPATCH(String url, String token, String json) {
         OkHttpClient client = getClient();
         Request request = new Request.Builder()
                 .url(url)
                 .patch(RequestBody.create(json, MediaType.parse("application/json")))
-                .addHeader("Wallet", walletName)
                 .build();
+        request = addToken(request, token);
         try {
             Response response = client.newCall(request).execute();
             return response.body().string();
@@ -120,13 +126,13 @@ public class Common {
         return null;
     }
 
-    public static byte[] requestGETtoBytes(String url, String walletName) {
+    public static byte[] requestGETtoBytes(String url, String token) {
         OkHttpClient client = getClient();
         Request request = new Request.Builder()
                 .url(url)
                 .get()
-                .addHeader("Wallet", walletName)
                 .build();
+        request = addToken(request, token);
         try {
             Response response = client.newCall(request).execute();
             return response.body().bytes();
