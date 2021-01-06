@@ -30,7 +30,7 @@ public class GlobalService {
     // agent configurations
     final String[] apiUrls = {"http://localhost:8021"};
     //final String[] apiUrls = {"http://localhost:8021", "http://localhost:8031"}; // with docker-compose-multi.yml
-    final String baseWalletName = "base"; // base wallet name when agent starts
+    final String stewardSeed = "000000000000000000000000Steward1";
 
     // controller configurations
     @Value("${controllerUrl}")
@@ -40,7 +40,9 @@ public class GlobalService {
     String walletName; // new wallet name
     String walletId; // new wallet id
     String jwtToken; // jwt token for wallet
+    String stewardJwtToken; // // jwt token for steward to register nym
     String imageUrl;
+    String seed; // random seed 32 characters
     String webhookUrl; // url to receive webhook messagess
     String did; // did
     String verkey; // verification key
@@ -56,14 +58,14 @@ public class GlobalService {
     }
 
     public String createInvitation() {
-        String response = requestPOST(randomStr(apiUrls) + "/connections/create-invitation", walletName, "{}");
+        String response = requestPOST(randomStr(apiUrls) + "/connections/create-invitation", jwtToken, "{}");
         String invitation = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation")).jsonString();
         log.info("createInvitation <<< invitation:" + invitation);
         return invitation;
     }
 
     public String createInvitationUrl() {
-        String response = requestPOST(randomStr(apiUrls) + "/connections/create-invitation", walletName, "{}");
+        String response = requestPOST(randomStr(apiUrls) + "/connections/create-invitation", jwtToken, "{}");
         String invitationUrl = JsonPath.read(response, "$.invitation_url");
         log.info("createInvitationUrl <<< invitationUrl:" + invitationUrl);
         return invitationUrl;
@@ -124,11 +126,16 @@ public class GlobalService {
     }
 
     public void provisionController() {
-        log.info("Create wallet and did, and register webhook url");
         version = getRandomInt(1, 100) + "." + getRandomInt(1, 100) + "." + getRandomInt(1, 100);
         walletName = "faber." + version;
         imageUrl = "https://identicon-api.herokuapp.com/" + walletName + "/300?format=png";
+        seed = UUID.randomUUID().toString().replaceAll("-", "");
         webhookUrl = controllerUrl + "/webhooks";
+
+        log.info("Obtain jwtToken of steward");
+        stewardJwtToken = createStewardJwtToken();
+
+        log.info("Create wallet and did");
         createWalletAndDid();
         log.info("Register did as issuer");
         registerDidAsIssuer();
@@ -139,55 +146,80 @@ public class GlobalService {
 
         log.info("Configuration of faber:");
         log.info("- wallet name: " + walletName);
+        log.info("- seed: " + seed);
         log.info("- did: " + did);
         log.info("- verification key: " + verkey);
         log.info("- webhook url: " + webhookUrl);
+        log.info("- jwt token: " + jwtToken);
         log.info("- schema ID: " + schemaId);
         log.info("- credential definition ID: " + credDefId);
 
         log.info("Initialization is done.");
         log.info("Run alice now.");
     }
+
     public void createWalletAndDid() {
         String body = JsonPath.parse("{" +
                 "  wallet_name: '" + walletName + "'," +
                 "  wallet_key: '" + walletName + ".key'," +
                 "  wallet_type: 'indy'," +
                 "  label: '" + walletName + ".label'," +
-                "  key_management_mode: 'managed'" +
-                //"  image_url: '" + imageUrl + "'," +
+                "  image_url: '" + imageUrl + "'," +
                 //"  webhook_urls: ['" + webhookUrl + "']" +
                 "}").jsonString();
         log.info("Create a new wallet:" + prettyJson(body));
         String response = requestPOST(randomStr(apiUrls) + "/multitenancy/wallet", null, body);
         log.info("response:" + response);
-
         walletId = JsonPath.read(response, "$.settings.['wallet.id']");
         jwtToken = JsonPath.read(response, "$.token");
 
-        log.info("Create a new local did");
-        response = requestPOST(randomStr(apiUrls) + "/wallet/did/create", jwtToken, "{}");
+        body = JsonPath.parse("{ seed: '" + seed + "'}").jsonString();
+        log.info("Create a new local did:" + prettyJson(body));
+        response = requestPOST(randomStr(apiUrls) + "/wallet/did/create", jwtToken, body);
         log.info("response:" + response);
         did = JsonPath.read(response, "$.result.did");
         verkey = JsonPath.read(response, "$.result.verkey");
         log.info("created did: " + did + ", verkey: " + verkey);
-        System.exit(0);
+    }
+
+    public String createStewardJwtToken() {
+        String stewardWallet = "steward." + version;
+        String body = JsonPath.parse("{" +
+                "  wallet_name: '" + stewardWallet + "'," +
+                "  wallet_key: '" + stewardWallet + ".key'," +
+                "  wallet_type: 'indy'," +
+                "}").jsonString();
+        log.info("Create a new steward wallet:" + prettyJson(body));
+        String response = requestPOST(randomStr(apiUrls) + "/multitenancy/wallet", null, body);
+        log.info("response:" + response);
+        String jwtToken = JsonPath.read(response, "$.token");
+
+        body = JsonPath.parse("{ seed: '" + stewardSeed + "'}").jsonString();
+        log.info("Create a steward did:" + prettyJson(body));
+        response = requestPOST(randomStr(apiUrls) + "/wallet/did/create", jwtToken, body);
+        log.info("response:" + response);
+        String did = JsonPath.read(response, "$.result.did");
+
+        String params = "?did=" + did;
+        log.info("Assign the did to public: " + did);
+        response = requestPOST(randomStr(apiUrls) + "/wallet/did/public" + params, jwtToken, "{}");
+        log.info("response: " + response);
+
+        return jwtToken;
     }
 
     public void registerDidAsIssuer() {
         String params = "?did=" + did +
                 "&verkey=" + verkey +
                 "&alias=" + walletName +
-                "&role=ENDORSER" +
-                "&wallet_name=" + walletName;
+                "&role=ENDORSER";
         log.info("Register the did to the ledger as a ENDORSER");
-        // did of base wallet must have STEWARD role
-        String response = requestPOST(randomStr(apiUrls) + "/ledger/register-nym" + params, baseWalletName, "{}");
+        String response = requestPOST(randomStr(apiUrls) + "/ledger/register-nym" + params, stewardJwtToken, "{}");
         log.info("response: " + response);
 
         params = "?did=" + did;
         log.info("Assign the did to public: " + did);
-        response = requestPOST(randomStr(apiUrls) + "/wallet/did/public" + params, walletName, "{}");
+        response = requestPOST(randomStr(apiUrls) + "/wallet/did/public" + params, jwtToken, "{}");
         log.info("response: " + response);
     }
 
@@ -198,7 +230,7 @@ public class GlobalService {
                 "  attributes: ['name', 'date', 'degree', 'age']" +
                 "}").jsonString();
         log.info("Create a new schema on the ledger:" + prettyJson(body));
-        String response = requestPOST(randomStr(apiUrls) + "/schemas", walletName, body);
+        String response = requestPOST(randomStr(apiUrls) + "/schemas", jwtToken, body);
         schemaId = JsonPath.read(response, "$.schema_id");
     }
 
@@ -210,7 +242,7 @@ public class GlobalService {
                 "  revocation_registry_size: 10" +
                 "}").jsonString();
         log.info("Create a new credential definition on the ledger:" + prettyJson(body));
-        String response = requestPOST(randomStr(apiUrls) + "/credential-definitions", walletName, body);
+        String response = requestPOST(randomStr(apiUrls) + "/credential-definitions", jwtToken, body);
         credDefId = JsonPath.read(response, "$.credential_definition_id");
     }
 
@@ -228,7 +260,7 @@ public class GlobalService {
                 "    ]" +
                 "  }" +
                 "}").jsonString();
-        String response = requestPOST(randomStr(apiUrls) + "/issue-credential/send-offer", walletName, body);
+        String response = requestPOST(randomStr(apiUrls) + "/issue-credential/send-offer", jwtToken, body);
     }
 
     public void sendProofRequest(String connectionId) {
@@ -263,7 +295,7 @@ public class GlobalService {
                 "    non_revoked: { to: " + curUnixTime + " }" +
                 "  }" +
                 "}").jsonString();
-        String response = requestPOST(randomStr(apiUrls) + "/present-proof/send-request", walletName, body);
+        String response = requestPOST(randomStr(apiUrls) + "/present-proof/send-request", jwtToken, body);
     }
 
     public void printProofResult(String body) {
@@ -280,7 +312,7 @@ public class GlobalService {
                 "  cred_rev_id: '" + credRevId + "'," +
                 "  publish: true" +
                 "}").jsonString();
-        String response =  requestPOST(randomStr(apiUrls) + "/revocation/revoke", walletName, body);
+        String response =  requestPOST(randomStr(apiUrls) + "/revocation/revoke", jwtToken, body);
         log.info("response: " + response);
     }
 
