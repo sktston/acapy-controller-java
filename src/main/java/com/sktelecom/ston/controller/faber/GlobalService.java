@@ -165,7 +165,7 @@ public class GlobalService {
                 "  wallet_type: 'indy'," +
                 "  label: '" + walletName + ".label'," +
                 "  image_url: '" + imageUrl + "'," +
-                //"  webhook_urls: ['" + webhookUrl + "']" +
+                "  wallet_webhook_urls: ['" + webhookUrl + "']" +
                 "}").jsonString();
         log.info("Create a new wallet:" + prettyJson(body));
         String response = requestPOST(randomStr(apiUrls) + "/multitenancy/wallet", null, body);
