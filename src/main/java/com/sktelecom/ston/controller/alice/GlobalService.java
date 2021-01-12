@@ -27,6 +27,8 @@ public class GlobalService {
 
     String version; // for randomness
     String walletName; // new walletName
+    String walletId; // new wallet id
+    String jwtToken; // jwt token for wallet
     String imageUrl;
     String webhookUrl; // url to receive webhook messagess
 
@@ -72,8 +74,8 @@ public class GlobalService {
                     sendProof(body);
                 }
                 else if (state.equals("presentation_acked")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> deleteWalletAndExit");
-                    deleteWalletAndExit();
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> delayedExit");
+                    delayedExit();
                 }
                 else {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
@@ -93,7 +95,7 @@ public class GlobalService {
     }
 
     public void provisionController() {
-        log.info("Create wallet and did, and register webhook url");
+        log.info("Create wallet");
         version = getRandomInt(1, 100) + "." + getRandomInt(1, 100) + "." + getRandomInt(1, 100);
         walletName = "alice." + version;
         imageUrl = "https://identicon-api.herokuapp.com/" + walletName + "/300?format=png";
@@ -103,35 +105,39 @@ public class GlobalService {
         log.info("Configuration of alice:");
         log.info("- wallet name: " + walletName);
         log.info("- webhook url: " + webhookUrl);
+        log.info("- wallet ID: " + walletId);
+        log.info("- jwt token: " + jwtToken);
     }
 
     public void createWallet() {
         String body = JsonPath.parse("{" +
-                "  name: '" + walletName + "'," +
-                "  key: '" + walletName + ".key'," +
-                "  type: 'indy'," +
+                "  wallet_name: '" + walletName + "'," +
+                "  wallet_key: '" + walletName + ".key'," +
+                "  wallet_type: 'indy'," +
                 "  label: '" + walletName + ".label'," +
                 "  image_url: '" + imageUrl + "'," +
-                "  webhook_urls: ['" + webhookUrl + "']" +
+                "  wallet_webhook_urls: ['" + webhookUrl + "']" +
                 "}").jsonString();
         log.info("Create a new wallet:" + prettyJson(body));
-        String response = requestPOST(randomStr(apiUrls) + "/wallet", "", body);
+        String response = requestPOST(randomStr(apiUrls) + "/multitenancy/wallet", null, body);
         log.info("response:" + response);
+        walletId = JsonPath.read(response, "$.settings.['wallet.id']");
+        jwtToken = JsonPath.read(response, "$.token");
     }
 
     public void receiveInvitation() {
         String invitation = requestGET(faberControllerUrl + "/invitation", "");
         log.info("invitation:" + invitation);
-        String response = requestPOST(randomStr(apiUrls) + "/connections/receive-invitation", walletName, invitation);
+        String response = requestPOST(randomStr(apiUrls) + "/connections/receive-invitation", jwtToken, invitation);
     }
 
     public void sendCredentialRequest(String credExId) {
-        String response = requestPOST(randomStr(apiUrls) + "/issue-credential/records/" + credExId + "/send-request", walletName, "{}");
+        String response = requestPOST(randomStr(apiUrls) + "/issue-credential/records/" + credExId + "/send-request", jwtToken, "{}");
     }
 
     public void sendProof(String reqBody) {
         String presExId = JsonPath.read(reqBody, "$.presentation_exchange_id");
-        String response = requestGET(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/credentials", walletName);
+        String response = requestGET(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/credentials", jwtToken);
 
         ArrayList<LinkedHashMap<String, Object>> credentials = JsonPath.read(response, "$");
         int credRevId = 0;
@@ -165,18 +171,12 @@ public class GlobalService {
                 .put("$", "requested_predicates", reqPreds)
                 .put("$", "self_attested_attributes", selfAttrs).jsonString();
 
-        response = requestPOST(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/send-presentation", walletName, body);
+        response = requestPOST(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/send-presentation", jwtToken, body);
     }
 
-    public void deleteWallet() {
-        log.info("Delete my wallet - walletName: " + walletName);
-        String response = requestDELETE(randomStr(apiUrls) + "/wallet/me", walletName);
-    }
-
-    public void deleteWalletAndExit() {
+    public void delayedExit() {
         TimerTask task = new TimerTask() {
             public void run() {
-                deleteWallet();
                 if (--iterations == 0) {
                     log.info("Alice demo completes - Exit");
                     afterTime = System.currentTimeMillis();

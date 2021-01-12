@@ -114,6 +114,7 @@ public class GlobalService {
                 log.info("  - message:" + JsonPath.read(body, "$.content"));
                 break;
             case "revocation_registry":
+            case "issuer_cred_rev":
                 log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
                 break;
             case "problem_report":
@@ -150,6 +151,7 @@ public class GlobalService {
         log.info("- did: " + did);
         log.info("- verification key: " + verkey);
         log.info("- webhook url: " + webhookUrl);
+        log.info("- wallet ID: " + walletId);
         log.info("- jwt token: " + jwtToken);
         log.info("- schema ID: " + schemaId);
         log.info("- credential definition ID: " + credDefId);
@@ -251,7 +253,7 @@ public class GlobalService {
                 "  connection_id: '" + connectionId + "'," +
                 "  cred_def_id: '" + credDefId + "'," +
                 "  credential_preview: {" +
-                "    @type: 'did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/credential-preview'," +
+                "    @type: 'https://didcomm.org/issue-credential/1.0/credential-preview'," +
                 "    attributes: [" +
                 "      { name: 'name', value: 'alice' }," +
                 "      { name: 'date', value: '05-2018' }," +

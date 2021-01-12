@@ -1,10 +1,10 @@
 version: '3'
 
 services:
-  acapy-agent:
+  acapy-agent-1:
     build:
       context: https://github.com/sktston/aries-cloudagent-python.git#develop
-      dockerfile: ./docker/Dockerfile.develop
+      dockerfile: ./docker/Dockerfile.run-wait
     ports:
       - 8020-8021:8020-8021
     networks:
@@ -16,12 +16,12 @@ services:
                  "--admin", "0.0.0.0", "8021",
                  "--admin-insecure-mode",
                  "--endpoint", "http://host.docker.internal:8020",
-                 "--tails-server-base-url", "http://13.124.169.12",
+                 "--tails-server-base-url", "http://221.168.33.78:6543",
                  "--storage-type", "indy",
-                 "--genesis-transactions", "{\"reqSignature\":{},\"txn\":{\"data\":{\"data\":{\"alias\":\"Node1\",\"blskey\":\"4N8aUNHSgjQVgkpm8nhNEfDf6txHznoYREg9kirmJrkivgL4oSEimFF6nsQ6M41QvhM2Z33nves5vfSn9n1UwNFJBYtWVnHYMATn76vLuL3zU88KyeAYcHfsih3He6UHcXDxcaecHVz6jhCYz1P2UZn2bDVruL5wXpehgBfBaLKm3Ba\",\"blskey_pop\":\"RahHYiCvoNCtPTrVtP7nMC5eTYrsUA8WjXbdhNc8debh1agE9bGiJxWBXYNFbnJXoXhWFMvyqhqhRoq737YQemH5ik9oL7R4NTTCz2LEZhkgLJzB3QRQqJyBNyv7acbdHrAT8nQ9UkLbaVL9NBpnWXBTw4LEMePaSHEw66RzPNdAX1\",\"client_ip\":\"54.180.86.51\",\"client_port\":9702,\"node_ip\":\"54.180.86.51\",\"node_port\":9701,\"services\":[\"VALIDATOR\"]},\"dest\":\"Gw6pDLhcBcoQesN72qfotTgFa7cbuqZpkX3Xo6pLhPhv\"},\"metadata\":{\"from\":\"Th7MpTaRZVRYnPiabds81Y\"},\"type\":\"0\"},\"txnMetadata\":{\"seqNo\":1,\"txnId\":\"fea82e10e894419fe2bea7d96296a6d46f50f93f9eeda954ec461b2ed2950b62\"},\"ver\":\"1\"}",
-                 "--inbound-transport", "http_custodial", "0.0.0.0", "8020",
+                 "--genesis-url", "http://221.168.33.78:9000/genesis",
+                 "--inbound-transport", "http", "0.0.0.0", "8020",
                  "--outbound-transport", "http",
-                 "--label", "cloud.agent",
+                 "--label", "base.agent",
                  "--seed", "000000000000000000000000Steward1",
                  "--wallet-type", "indy",
                  "--wallet-name", "base",
@@ -42,29 +42,32 @@ services:
                  "--trace-target", "log",
                  "--trace-tag", "agent.events",
                  "--trace-label", "agent.trace",
-                 "--plugin", "aries_cloudagent.wallet_handler"]
+                 "--multitenant",
+                 "--multitenant-admin",
+                 "--jwt-secret", "secret",
+                 "--auto-provision"]
 
   acapy-agent-2:
     build:
       context: https://github.com/sktston/aries-cloudagent-python.git#develop
-      dockerfile: ./docker/Dockerfile.develop
+      dockerfile: ./docker/Dockerfile.run-wait
     ports:
       - 8030-8031:8030-8031
     networks:
       - acapy
     depends_on:
       - postgres
-    entrypoint: [ "./wait-for-it.sh", "acapy-agent:8031", "--", "aca-py",
+    entrypoint: [ "./wait-for-it.sh", "acapy-agent-1:8021", "--", "aca-py",
                   "start",
                   "--admin", "0.0.0.0", "8031",
                   "--admin-insecure-mode",
                   "--endpoint", "http://host.docker.internal:8030",
-                  "--tails-server-base-url", "http://13.124.169.12",
+                  "--tails-server-base-url", "http://221.168.33.78:6543",
                   "--storage-type", "indy",
-                  "--genesis-transactions", "{\"reqSignature\":{},\"txn\":{\"data\":{\"data\":{\"alias\":\"Node1\",\"blskey\":\"4N8aUNHSgjQVgkpm8nhNEfDf6txHznoYREg9kirmJrkivgL4oSEimFF6nsQ6M41QvhM2Z33nves5vfSn9n1UwNFJBYtWVnHYMATn76vLuL3zU88KyeAYcHfsih3He6UHcXDxcaecHVz6jhCYz1P2UZn2bDVruL5wXpehgBfBaLKm3Ba\",\"blskey_pop\":\"RahHYiCvoNCtPTrVtP7nMC5eTYrsUA8WjXbdhNc8debh1agE9bGiJxWBXYNFbnJXoXhWFMvyqhqhRoq737YQemH5ik9oL7R4NTTCz2LEZhkgLJzB3QRQqJyBNyv7acbdHrAT8nQ9UkLbaVL9NBpnWXBTw4LEMePaSHEw66RzPNdAX1\",\"client_ip\":\"54.180.86.51\",\"client_port\":9702,\"node_ip\":\"54.180.86.51\",\"node_port\":9701,\"services\":[\"VALIDATOR\"]},\"dest\":\"Gw6pDLhcBcoQesN72qfotTgFa7cbuqZpkX3Xo6pLhPhv\"},\"metadata\":{\"from\":\"Th7MpTaRZVRYnPiabds81Y\"},\"type\":\"0\"},\"txnMetadata\":{\"seqNo\":1,\"txnId\":\"fea82e10e894419fe2bea7d96296a6d46f50f93f9eeda954ec461b2ed2950b62\"},\"ver\":\"1\"}",
-                  "--inbound-transport", "http_custodial", "0.0.0.0", "8030",
+                  "--genesis-url", "http://221.168.33.78:9000/genesis",
+                  "--inbound-transport", "http", "0.0.0.0", "8030",
                   "--outbound-transport", "http",
-                  "--label", "cloud.agent",
+                  "--label", "base.agent",
                   "--seed", "000000000000000000000000Steward1",
                   "--wallet-type", "indy",
                   "--wallet-name", "base",
@@ -85,7 +88,10 @@ services:
                   "--trace-target", "log",
                   "--trace-tag", "agent.events",
                   "--trace-label", "agent.trace",
-                  "--plugin", "aries_cloudagent.wallet_handler" ]
+                  "--multitenant",
+                  "--multitenant-admin",
+                  "--jwt-secret", "secret",
+                  "--auto-provision"]
 
   postgres:
     image: postgres
