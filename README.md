@@ -1,16 +1,13 @@
 # Controller of aries-cloudagent-python (Java Spring boot)
 
 ### Steps to run
-- Run Cloud Agents (Faber and Alice)
+- Run Cloud Agent (multitenant enabled)
 ```
 cd docker
 docker-compose up
 ```
-Faber agent opens 8020 port (endpoint) and 8021 port (admin). \
+Cloud agent opens 8020 port (endpoint) and 8021 port (admin). \
 Check admin (swagger API) http://localhost:8021
-
-Alice agent opens 8030 port (endpoint) and 8031 port (admin). \
-Check admin http://localhost:8031
 
 `docker-compose up --build` is fully recommended if you pull a repository recently.
 
@@ -43,7 +40,7 @@ You can see below log at faber side when demo completes
 - Change ledger
 
 Open `docker/docker-compose.yml` \
-Edit the value of `--genesis-transactions`
+Edit the value of `--genesis-url` or replace the parameter and the value with `--genesis-transactions`
 
 - Access faber from non-docker agent
 
@@ -74,7 +71,9 @@ GET http://localhost:8040/invitation-url
 |  |  |  |  |  |  |  |
 | Credential | issue_credential, offer_sent | POST /issue-credential/send-offer |  | issue_credential, offer_received |  |  |
 |  | issue_credential, request_received |  | POST /issue-credential/records/{cred_ex_id}/send-request | issue_credential, request_sent |  | --auto-respond-credential-offer |
+|  | issuer_cred_rev, issued |  |  |  |  |  |
 |  | issue_credential, credential_issued | POST /issue-credential/records/{cred_ex_id}/issue |  | issue_credential, credential_received |  | **--auto-respond-credential-request** |
+|  | issuer_cred_rev, issued |  |  |  |  |  |
 |  | issue_credential, credential_acked |  | POST /issue-credential/records/{cred_ex_id}/store | issue_credential, credential_acked |  | **--auto-store-credential** |
 |  |  |  |  |  |  |  |
 | Proof | present_proof, request_sent | /present-proof/send-request |  | present_proof, request_received |  |  |
