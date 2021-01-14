@@ -13,7 +13,7 @@ services:
                  "start",
                  "--admin", "0.0.0.0", "8021",
                  "--admin-insecure-mode",
-                 "--endpoint", "http://host.docker.internal:8020",
+                 "--endpoint", "http://221.168.33.78:8020",
                  "--tails-server-base-url", "http://221.168.33.78:6543",
                  "--storage-type", "indy",
                  "--genesis-url", "http://221.168.33.78:9000/genesis",
