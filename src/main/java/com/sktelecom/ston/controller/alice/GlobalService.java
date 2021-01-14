@@ -126,8 +126,14 @@ public class GlobalService {
     }
 
     public void receiveInvitation() {
-        String invitation = requestGET(faberControllerUrl + "/invitation", "");
-        log.info("invitation:" + invitation);
+        String invitationUrl = requestGET(faberControllerUrl + "/invitation-url", "");
+        log.info("invitation-url: " + invitationUrl);
+        String invitation = parseInvitationUrl(invitationUrl);
+        if (invitation == null) {
+            log.warn("Invalid invitationUrl");
+            return;
+        }
+        log.info("invitation: " + invitation);
         String response = requestPOST(randomStr(apiUrls) + "/connections/receive-invitation", jwtToken, invitation);
     }
 

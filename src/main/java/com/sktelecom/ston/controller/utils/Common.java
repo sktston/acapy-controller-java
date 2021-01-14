@@ -8,7 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 
 import java.io.IOException;
-import java.util.Random;
+import java.util.Base64;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -28,6 +28,17 @@ public class Common {
 
     public static String randomStr(String[] strings) {
         return strings[getRandomInt(0, strings.length)];
+    }
+
+
+    public static String parseInvitationUrl(String invitationUrl) {
+        String[] tokens = invitationUrl.split("\\?c_i=");
+        if (tokens.length != 2)
+            return null;
+
+        String encodedInvitation = tokens[1];
+        Base64.Decoder decoder = Base64.getDecoder();
+        return new String(decoder.decode(encodedInvitation.getBytes()));
     }
 
     static OkHttpClient getClient() {
