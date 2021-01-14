@@ -28,8 +28,8 @@ import static com.sktelecom.ston.controller.utils.Common.*;
 @Slf4j
 public class GlobalService {
     // agent configurations
-    final String[] apiUrls = {"http://localhost:8021"};
-    //final String[] apiUrls = {"http://localhost:8021", "http://localhost:8031"}; // with docker-compose-multi.yml
+    final String[] apiUrls = {"http://221.168.33.78:8021"};
+    //final String[] apiUrls = {"http://221.168.33.78:8021", "http://221.168.33.78:8031"}; // with docker-compose-multi.yml
     final String stewardSeed = "000000000000000000000000Steward1";
 
     // controller configurations
