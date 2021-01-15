@@ -18,6 +18,7 @@ import org.springframework.util.Assert;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.UUID;
 
@@ -134,7 +135,7 @@ public class GlobalService {
         webhookUrl = controllerUrl + "/webhooks";
 
         log.info("Obtain jwtToken of steward");
-        stewardJwtToken = createStewardJwtToken();
+        stewardJwtToken = obtainStewardJwtToken();
 
         log.info("Create wallet and did");
         createWalletAndDid();
@@ -184,30 +185,51 @@ public class GlobalService {
         log.info("created did: " + did + ", verkey: " + verkey);
     }
 
-    public String createStewardJwtToken() {
-        String stewardWallet = "steward." + version;
-        String body = JsonPath.parse("{" +
-                "  wallet_name: '" + stewardWallet + "'," +
-                "  wallet_key: '" + stewardWallet + ".key'," +
-                "  wallet_type: 'indy'," +
-                "}").jsonString();
-        log.info("Create a new steward wallet:" + prettyJson(body));
-        String response = requestPOST(randomStr(apiUrls) + "/multitenancy/wallet", null, body);
-        log.info("response:" + response);
-        String jwtToken = JsonPath.read(response, "$.token");
+    public String obtainStewardJwtToken() {
+        String stewardWallet = "steward";
+        String stewardWalletId = null;
 
-        body = JsonPath.parse("{ seed: '" + stewardSeed + "'}").jsonString();
-        log.info("Create a steward did:" + prettyJson(body));
-        response = requestPOST(randomStr(apiUrls) + "/wallet/did/create", jwtToken, body);
-        log.info("response:" + response);
-        String did = JsonPath.read(response, "$.result.did");
+        // check if steward wallet already exists
+        String response = requestGET(randomStr(apiUrls) + "/multitenancy/wallets", null);
+        ArrayList<LinkedHashMap<String, Object>> wallets = JsonPath.read(response, "$.results");
+        for (LinkedHashMap<String, Object> element : wallets) {
+            if (JsonPath.read(element, "$.settings.['wallet.name']").equals(stewardWallet))
+                stewardWalletId = JsonPath.read(element, "$.wallet_id");
+        }
 
-        String params = "?did=" + did;
-        log.info("Assign the did to public: " + did);
-        response = requestPOST(randomStr(apiUrls) + "/wallet/did/public" + params, jwtToken, "{}");
-        log.info("response: " + response);
+        if (stewardWalletId != null) {
+            // stewardWallet exists -> get and return jwt token
+            log.info("Found steward wallet - Get jwt token with wallet id: " + stewardWalletId);
+            response = requestPOST(randomStr(apiUrls) + "/multitenancy/wallet/" + stewardWalletId + "/token", null, "{}");
+            log.info("response: " + response);
 
-        return jwtToken;
+            return JsonPath.read(response, "$.token");
+        }
+        else {
+            // stewardWallet not exists -> create stewardWallet and get jwt token
+            String body = JsonPath.parse("{" +
+                    "  wallet_name: '" + stewardWallet + "'," +
+                    "  wallet_key: '" + stewardWallet + ".key'," +
+                    "  wallet_type: 'indy'," +
+                    "}").jsonString();
+            log.info("Not found steward wallet - Create a new steward wallet:" + prettyJson(body));
+            response = requestPOST(randomStr(apiUrls) + "/multitenancy/wallet", null, body);
+            log.info("response:" + response);
+            String jwtToken = JsonPath.read(response, "$.token");
+
+            body = JsonPath.parse("{ seed: '" + stewardSeed + "'}").jsonString();
+            log.info("Create a steward did:" + prettyJson(body));
+            response = requestPOST(randomStr(apiUrls) + "/wallet/did/create", jwtToken, body);
+            log.info("response:" + response);
+            String did = JsonPath.read(response, "$.result.did");
+
+            String params = "?did=" + did;
+            log.info("Assign the did to public: " + did);
+            response = requestPOST(randomStr(apiUrls) + "/wallet/did/public" + params, jwtToken, "{}");
+            log.info("response: " + response);
+
+            return jwtToken;
+        }
     }
 
     public void registerDidAsIssuer() {
@@ -241,7 +263,7 @@ public class GlobalService {
                 "  schema_id: '" + schemaId + "'," +
                 "  tag: 'tag." + version + "'," +
                 "  support_revocation: true," +
-                "  revocation_registry_size: 10" +
+                "  revocation_registry_size: 5" +
                 "}").jsonString();
         log.info("Create a new credential definition on the ledger:" + prettyJson(body));
         String response = requestPOST(randomStr(apiUrls) + "/credential-definitions", jwtToken, body);
