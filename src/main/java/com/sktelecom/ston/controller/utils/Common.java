@@ -6,9 +6,9 @@ import com.google.gson.JsonParser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
+import org.apache.commons.codec.binary.Base64;
 
 import java.io.IOException;
-import java.util.Base64;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -37,8 +37,7 @@ public class Common {
             return null;
 
         String encodedInvitation = tokens[1];
-        Base64.Decoder decoder = Base64.getDecoder();
-        return new String(decoder.decode(encodedInvitation.getBytes()));
+        return new String(Base64.decodeBase64(encodedInvitation));
     }
 
     static OkHttpClient getClient() {

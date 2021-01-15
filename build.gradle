@@ -26,6 +26,7 @@ dependencies {
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.10'
     implementation 'com.jayway.jsonpath:json-path:2.4.0'
     compile 'com.google.zxing:javase:3.3.3'
+    compile group: 'commons-codec', name: 'commons-codec', version: '1.15'
 
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation('org.springframework.boot:spring-boot-starter-test') {
