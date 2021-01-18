@@ -79,7 +79,8 @@ public class GlobalService {
         switch(topic) {
             case "connections":
                 // When connection with alice is done, send credential offer
-                if (state.equals("active")) {
+                //if (state.equals("active")) {
+                if (state.equals("response")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
                     sendCredentialOffer(JsonPath.read(body, "$.connection_id"));
                 }
