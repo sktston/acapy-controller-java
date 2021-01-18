@@ -19,7 +19,7 @@ import static com.sktelecom.ston.controller.utils.Common.*;
 @Slf4j
 public class GlobalService {
     final String agentApiUrl = "http://localhost:8031";
-    final String faberContUrl = "http://localhost:8022";
+    final String faberContUrl = "http://localhost:8040";
 
     // check options
     static boolean enableOob = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_OOB", "false"));
