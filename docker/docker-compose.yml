@@ -16,7 +16,7 @@ services:
                  "--endpoint", "http://221.168.33.78:8020",
                  "--tails-server-base-url", "http://221.168.33.78:6543",
                  "--storage-type", "indy",
-                 "--genesis-url", "http://221.168.33.78:9000/genesis",
+                 "--genesis-url", "https://initial-v2-platform.readthedocs.io/ko/master/genesis_stondev.txt",
                  "--inbound-transport", "http", "0.0.0.0", "8020",
                  "--outbound-transport", "http",
                  "--label", "base.agent",
