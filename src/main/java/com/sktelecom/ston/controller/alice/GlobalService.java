@@ -20,13 +20,19 @@ import static com.sktelecom.ston.controller.utils.Common.*;
 public class GlobalService {
     final String agentApiUrl = "http://localhost:8031";
     final String faberContUrl = "http://localhost:8040";
+    int iterations = 1; // for long-term test
 
     // check options
     static boolean enableOob = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_OOB", "false"));
     static boolean observeMode = Boolean.parseBoolean(System.getenv().getOrDefault("OBSERVE_MODE", "false"));
 
+    // time calc
+    long beforeTime;
+    long afterTime;
+
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
+        beforeTime = System.currentTimeMillis();
         if (observeMode)
             return;
         log.info("Receive invitation from faber controller");
@@ -147,8 +153,18 @@ public class GlobalService {
     public void delayedExit() {
         TimerTask task = new TimerTask() {
             public void run() {
-                log.info("Alice demo completes - Exit");
-                System.exit(0);
+                if (--iterations == 0) {
+                    log.info("Alice demo completes - Exit");
+                    afterTime = System.currentTimeMillis();
+                    long secDiffTime = afterTime - beforeTime;
+                    log.info("Elapsed time (ms) : " + secDiffTime);
+                    System.exit(0);
+                }
+                else {
+                    log.info("Remaining iterations : " + iterations);
+                    log.info("Receive invitation from faber controller");
+                    receiveInvitation();
+                }
             }
         };
         Timer timer = new Timer("Timer");
