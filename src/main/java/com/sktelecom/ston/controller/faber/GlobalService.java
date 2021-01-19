@@ -79,8 +79,11 @@ public class GlobalService {
         switch(topic) {
             case "connections":
                 // When connection with alice is done, send credential offer
-                //if (state.equals("active")) {
-                if (state.equals("response")) {
+                if (state.equals("active") && !controllerUrl.equals("http://221.168.33.78:8040")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
+                    sendCredentialOffer(JsonPath.read(body, "$.connection_id"));
+                }
+                else if (state.equals("response") && controllerUrl.equals("http://221.168.33.78:8040")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
                     sendCredentialOffer(JsonPath.read(body, "$.connection_id"));
                 }
@@ -263,8 +266,16 @@ public class GlobalService {
         String body = JsonPath.parse("{" +
                 "  schema_id: '" + schemaId + "'," +
                 "  tag: 'tag." + version + "'," +
-                "  support_revocation: false" +
+                "  support_revocation: true," +
+                "  revocation_registry_size: 50" +
                 "}").jsonString();
+        if (controllerUrl.equals("http://221.168.33.78:8040")) {
+            body = JsonPath.parse("{" +
+                    "  schema_id: '" + schemaId + "'," +
+                    "  tag: 'tag." + version + "'," +
+                    "  support_revocation: false" +
+                    "}").jsonString();
+        }
         log.info("Create a new credential definition on the ledger:" + prettyJson(body));
         String response = requestPOST(randomStr(apiUrls) + "/credential-definitions", jwtToken, body);
         credDefId = JsonPath.read(response, "$.credential_definition_id");
