@@ -74,8 +74,8 @@ public class GlobalService {
                     sendProof(body);
                 }
                 else if (state.equals("presentation_acked")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> delayedExit");
-                    delayedExit();
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> deleteWalletAndExit");
+                    deleteWalletAndExit();
                 }
                 else {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
@@ -180,9 +180,15 @@ public class GlobalService {
         response = requestPOST(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/send-presentation", jwtToken, body);
     }
 
-    public void delayedExit() {
+    public void deleteWallet() {
+        log.info("Delete my wallet - walletName: " + walletName + ", walletId: " + walletId);
+        String response = requestPOST(randomStr(apiUrls) + "/multitenancy/wallet/" + walletId + "/remove", null, "{}");
+    }
+
+    public void deleteWalletAndExit() {
         TimerTask task = new TimerTask() {
             public void run() {
+                deleteWallet();
                 if (--iterations == 0) {
                     log.info("Alice demo completes - Exit");
                     afterTime = System.currentTimeMillis();
