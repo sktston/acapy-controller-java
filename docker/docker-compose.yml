@@ -20,6 +20,7 @@ services:
                  "--inbound-transport", "http", "0.0.0.0", "8020",
                  "--outbound-transport", "http",
                  "--label", "base.agent",
+                 "--public-invites",
                  "--wallet-local-did",
                  "--wallet-type", "indy",
                  "--wallet-name", "base",

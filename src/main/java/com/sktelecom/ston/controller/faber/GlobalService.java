@@ -59,14 +59,16 @@ public class GlobalService {
     }
 
     public String createInvitation() {
-        String response = requestPOST(randomStr(apiUrls) + "/connections/create-invitation", jwtToken, "{}");
+        String params = "?public=true";
+        String response = requestPOST(randomStr(apiUrls) + "/connections/create-invitation" + params, jwtToken, "{}");
         String invitation = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation")).jsonString();
         log.info("createInvitation <<< invitation:" + invitation);
         return invitation;
     }
 
     public String createInvitationUrl() {
-        String response = requestPOST(randomStr(apiUrls) + "/connections/create-invitation", jwtToken, "{}");
+        String params = "?public=true";
+        String response = requestPOST(randomStr(apiUrls) + "/connections/create-invitation" + params, jwtToken, "{}");
         String invitationUrl = JsonPath.read(response, "$.invitation_url");
         log.info("createInvitationUrl <<< invitationUrl:" + invitationUrl);
         return invitationUrl;
