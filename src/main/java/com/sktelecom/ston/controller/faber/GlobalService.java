@@ -189,25 +189,13 @@ public class GlobalService {
 
     public String obtainStewardJwtToken() {
         String stewardWallet = "steward";
-        String stewardWalletId = null;
+        String params = "?wallet_name=" + stewardWallet;
 
         // check if steward wallet already exists
-        String response = requestGET(randomStr(apiUrls) + "/multitenancy/wallets", null);
+        String response = requestGET(randomStr(apiUrls) + "/multitenancy/wallets" + params, null);
         ArrayList<LinkedHashMap<String, Object>> wallets = JsonPath.read(response, "$.results");
-        for (LinkedHashMap<String, Object> element : wallets) {
-            if (JsonPath.read(element, "$.settings.['wallet.name']").equals(stewardWallet))
-                stewardWalletId = JsonPath.read(element, "$.wallet_id");
-        }
 
-        if (stewardWalletId != null) {
-            // stewardWallet exists -> get and return jwt token
-            log.info("Found steward wallet - Get jwt token with wallet id: " + stewardWalletId);
-            response = requestPOST(randomStr(apiUrls) + "/multitenancy/wallet/" + stewardWalletId + "/token", null, "{}");
-            log.info("response: " + response);
-
-            return JsonPath.read(response, "$.token");
-        }
-        else {
+        if (wallets.isEmpty()) {
             // stewardWallet not exists -> create stewardWallet and get jwt token
             String body = JsonPath.parse("{" +
                     "  wallet_name: '" + stewardWallet + "'," +
@@ -225,12 +213,23 @@ public class GlobalService {
             log.info("response:" + response);
             String did = JsonPath.read(response, "$.result.did");
 
-            String params = "?did=" + did;
+            params = "?did=" + did;
             log.info("Assign the did to public: " + did);
             response = requestPOST(randomStr(apiUrls) + "/wallet/did/public" + params, jwtToken, "{}");
             log.info("response: " + response);
 
             return jwtToken;
+        }
+        else {
+            // stewardWallet exists -> get and return jwt token
+            LinkedHashMap<String, Object> element = wallets.get(0);
+            String stewardWalletId = JsonPath.read(element, "$.wallet_id");
+
+            log.info("Found steward wallet - Get jwt token with wallet id: " + stewardWalletId);
+            response = requestPOST(randomStr(apiUrls) + "/multitenancy/wallet/" + stewardWalletId + "/token", null, "{}");
+            log.info("response: " + response);
+
+            return JsonPath.read(response, "$.token");
         }
     }
 
