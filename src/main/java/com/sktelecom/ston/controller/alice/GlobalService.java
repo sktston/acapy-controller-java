@@ -101,6 +101,7 @@ public class GlobalService {
         imageUrl = "https://identicon-api.herokuapp.com/" + walletName + "/300?format=png";
         webhookUrl = controllerUrl + "/webhooks";
         createWallet();
+        updateWallet(); // just for update testing
 
         log.info("Configuration of alice:");
         log.info("- wallet name: " + walletName);
@@ -113,16 +114,24 @@ public class GlobalService {
         String body = JsonPath.parse("{" +
                 "  wallet_name: '" + walletName + "'," +
                 "  wallet_key: '" + walletName + ".key'," +
-                "  wallet_type: 'indy'," +
-                "  label: '" + walletName + ".label'," +
-                "  image_url: '" + imageUrl + "'," +
-                "  wallet_webhook_urls: ['" + webhookUrl + "']" +
+                "  wallet_type: 'indy'" +
                 "}").jsonString();
         log.info("Create a new wallet:" + prettyJson(body));
         String response = requestPOST(randomStr(apiUrls) + "/multitenancy/wallet", null, body);
         log.info("response:" + response);
         walletId = JsonPath.read(response, "$.settings.['wallet.id']");
         jwtToken = JsonPath.read(response, "$.token");
+    }
+
+    public void updateWallet() {
+        String body = JsonPath.parse("{" +
+                "  label: '" + walletName + ".label'," +
+                "  image_url: '" + imageUrl + "'," +
+                "  wallet_webhook_urls: ['" + webhookUrl + "']" +
+                "}").jsonString();
+        log.info("Update a existing wallet:" + prettyJson(body));
+        String response = requestPUT(randomStr(apiUrls) + "/multitenancy/wallet/" + walletId, null, body);
+        log.info("response:" + response);
     }
 
     public void receiveInvitation() {
