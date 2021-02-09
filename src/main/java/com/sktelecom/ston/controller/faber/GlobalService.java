@@ -298,14 +298,17 @@ public class GlobalService {
                 "    requested_attributes: {" +
                 "      attr_name: {" +
                 "        name: 'name'," +
+                "        non_revoked: { from: 0, to: " + curUnixTime + " }," +
                 "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
                 "      }," +
                 "      attr_date: {" +
                 "        name: 'date'," +
+                "        non_revoked: { from: 0, to: " + curUnixTime + " }," +
                 "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
                 "      }," +
                 "      attr_degree: {" +
                 "        name: 'degree'," +
+                "        non_revoked: { from: 0, to: " + curUnixTime + " }," +
                 "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
                 "      }" +
                 "    }," +
@@ -314,10 +317,10 @@ public class GlobalService {
                 "        name: 'age'," +
                 "        p_type: '>='," +
                 "        p_value: 20," +
+                "        non_revoked: { from: 0, to: " + curUnixTime + " }," +
                 "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
                 "      }" +
-                "    }," +
-                "    non_revoked: { to: " + curUnixTime + " }" +
+                "    }" +
                 "  }" +
                 "}").jsonString();
         String response = requestPOST(randomStr(apiUrls) + "/present-proof/send-request", jwtToken, body);
