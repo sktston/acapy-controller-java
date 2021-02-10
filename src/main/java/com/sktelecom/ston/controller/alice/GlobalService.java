@@ -82,8 +82,15 @@ public class GlobalService {
                 }
                 break;
             case "basicmessages":
-                log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print message");
-                log.info("  - message:" + JsonPath.read(body, "$.content"));
+                String message = JsonPath.read(body, "$.content");
+                if (message.equals("PrivacyPolicyOffer")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPrivacyPolicyAgreed");
+                    sendPrivacyPolicyAgreed(JsonPath.read(body, "$.connection_id"));
+                }
+                else {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print message");
+                }
+                log.info("  - message: " + JsonPath.read(body, "$.content"));
                 break;
             case "problem_report":
                 log.warn("- Case (topic:" + topic + ") -> Print body");
@@ -135,6 +142,13 @@ public class GlobalService {
         }
         log.info("invitation: " + invitation);
         String response = requestPOST(randomStr(apiUrls) + "/connections/receive-invitation", jwtToken, invitation);
+    }
+
+    public void sendPrivacyPolicyAgreed(String connectionId) {
+        String body = JsonPath.parse("{" +
+                "  content: 'PrivacyPolicyAgreed'," +
+                "}").jsonString();
+        String response = requestPOST(randomStr(apiUrls) + "/connections/" + connectionId + "/send-message", jwtToken, body);
     }
 
     public void sendCredentialRequest(String credExId) {

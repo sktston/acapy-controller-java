@@ -82,8 +82,8 @@ public class GlobalService {
             case "connections":
                 // When connection with alice is done, send credential offer
                 if (state.equals("active")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
-                    sendCredentialOffer(JsonPath.read(body, "$.connection_id"));
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPrivacyPolicyOffer");
+                    sendPrivacyPolicyOffer(JsonPath.read(body, "$.connection_id"));
                 }
                 else {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
@@ -113,8 +113,15 @@ public class GlobalService {
                 }
                 break;
             case "basicmessages":
-                log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print message");
-                log.info("  - message:" + JsonPath.read(body, "$.content"));
+                String message = JsonPath.read(body, "$.content");
+                if (message.equals("PrivacyPolicyAgreed")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
+                    sendCredentialOffer(JsonPath.read(body, "$.connection_id"));
+                }
+                else {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print message");
+                }
+                log.info("  - message: " + JsonPath.read(body, "$.content"));
                 break;
             case "revocation_registry":
             case "issuer_cred_rev":
@@ -269,6 +276,13 @@ public class GlobalService {
         log.info("Create a new credential definition on the ledger:" + prettyJson(body));
         String response = requestPOST(randomStr(apiUrls) + "/credential-definitions", jwtToken, body);
         credDefId = JsonPath.read(response, "$.credential_definition_id");
+    }
+
+    public void sendPrivacyPolicyOffer(String connectionId) {
+        String body = JsonPath.parse("{" +
+                "  content: 'PrivacyPolicyOffer'," +
+                "}").jsonString();
+        String response = requestPOST(randomStr(apiUrls) + "/connections/" + connectionId + "/send-message", jwtToken, body);
     }
 
     public void sendCredentialOffer(String connectionId) {
