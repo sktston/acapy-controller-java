@@ -20,14 +20,12 @@ services:
                  "--inbound-transport", "http", "0.0.0.0", "8020",
                  "--outbound-transport", "http",
                  "--label", "base.agent",
-                 "--public-invites",
                  "--wallet-local-did",
                  "--wallet-type", "indy",
                  "--wallet-name", "base",
                  "--wallet-key", "base.key",
                  "--auto-accept-invites",
-                 "--auto-accept-requests-peer",
-                 "--auto-accept-requests-public",
+                 "--auto-accept-requests",
                  "--auto-ping-connection",
                  "--auto-respond-credential-request",
                  "--auto-store-credential",
@@ -42,7 +40,9 @@ services:
                  "--multitenant",
                  "--multitenant-admin",
                  "--jwt-secret", "secret",
-                 "--auto-provision"]
+                 "--auto-provision",
+                 "--public-invites",
+                 "--invite-public"]
 
 networks:
   acapy:

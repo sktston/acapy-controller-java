@@ -31,8 +31,7 @@ services:
                  "--wallet-storage-config", "{\"url\":\"postgres:5432\",\"wallet_scheme\":\"MultiWalletSingleTableSharedPool\"}",
                  "--wallet-storage-creds", "{\"account\":\"postgres\",\"password\":\"mysecretpassword\",\"admin_account\":\"postgres\",\"admin_password\":\"mysecretpassword\"}",
                  "--auto-accept-invites",
-                 "--auto-accept-requests-peer",
-                 "--auto-accept-requests-public",
+                 "--auto-accept-requests",
                  "--auto-ping-connection",
                  "--auto-respond-credential-request",
                  "--auto-store-credential",
@@ -47,7 +46,9 @@ services:
                  "--multitenant",
                  "--multitenant-admin",
                  "--jwt-secret", "secret",
-                 "--auto-provision"]
+                 "--auto-provision",
+                 "--public-invites",
+                 "--invite-public" ]
 
   acapy-agent-2:
     build:
@@ -79,8 +80,7 @@ services:
                   "--wallet-storage-config", "{\"url\":\"postgres:5432\",\"wallet_scheme\":\"MultiWalletSingleTableSharedPool\"}",
                   "--wallet-storage-creds", "{\"account\":\"postgres\",\"password\":\"mysecretpassword\",\"admin_account\":\"postgres\",\"admin_password\":\"mysecretpassword\"}",
                   "--auto-accept-invites",
-                  "--auto-accept-requests-peer",
-                  "--auto-accept-requests-public",
+                  "--auto-accept-requests",
                   "--auto-ping-connection",
                   "--auto-respond-credential-request",
                   "--auto-store-credential",
@@ -95,7 +95,9 @@ services:
                   "--multitenant",
                   "--multitenant-admin",
                   "--jwt-secret", "secret",
-                  "--auto-provision"]
+                  "--auto-provision",
+                  "--public-invites",
+                  "--invite-public" ]
 
   postgres:
     image: postgres
