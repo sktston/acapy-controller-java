@@ -83,7 +83,7 @@ public class GlobalService {
                 break;
             case "basicmessages":
                 String message = JsonPath.read(body, "$.content");
-                if (message.equals("PrivacyPolicyOffer")) {
+                if (message.contains("PrivacyPolicyOffer")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPrivacyPolicyAgreed");
                     sendPrivacyPolicyAgreed(JsonPath.read(body, "$.connection_id"));
                 }

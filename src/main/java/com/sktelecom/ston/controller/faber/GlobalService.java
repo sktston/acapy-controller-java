@@ -114,7 +114,7 @@ public class GlobalService {
                 break;
             case "basicmessages":
                 String message = JsonPath.read(body, "$.content");
-                if (message.equals("PrivacyPolicyAgreed")) {
+                if (message.contains("PrivacyPolicyAgreed")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
                     sendCredentialOffer(JsonPath.read(body, "$.connection_id"));
                 }
@@ -280,7 +280,7 @@ public class GlobalService {
 
     public void sendPrivacyPolicyOffer(String connectionId) {
         String body = JsonPath.parse("{" +
-                "  content: 'PrivacyPolicyOffer'," +
+                "  content: 'PrivacyPolicyOffer. Content here. If you agree, send me a message. PrivacyPolicyAgreed'," +
                 "}").jsonString();
         String response = requestPOST(randomStr(apiUrls) + "/connections/" + connectionId + "/send-message", jwtToken, body);
     }
