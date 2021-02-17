@@ -89,6 +89,7 @@ public class GlobalService {
                     log.info("- PrivacyPolicyOffer is contained -> sendPrivacyPolicyAgreed");
                     sendPrivacyPolicyAgreed(JsonPath.read(body, "$.connection_id"));
                 }
+                break;
             case "problem_report":
                 log.warn("- Case (topic:" + topic + ") -> Print body");
                 log.warn("  - body:" + prettyJson(body));
