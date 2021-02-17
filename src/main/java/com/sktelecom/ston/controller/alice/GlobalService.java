@@ -82,16 +82,13 @@ public class GlobalService {
                 }
                 break;
             case "basicmessages":
+                log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print message");
                 String message = JsonPath.read(body, "$.content");
+                log.info("  - message: " + message);
                 if (message.contains("PrivacyPolicyOffer")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPrivacyPolicyAgreed");
+                    log.info("- PrivacyPolicyOffer is contained -> sendPrivacyPolicyAgreed");
                     sendPrivacyPolicyAgreed(JsonPath.read(body, "$.connection_id"));
                 }
-                else {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print message");
-                }
-                log.info("  - message: " + JsonPath.read(body, "$.content"));
-                break;
             case "problem_report":
                 log.warn("- Case (topic:" + topic + ") -> Print body");
                 log.warn("  - body:" + prettyJson(body));

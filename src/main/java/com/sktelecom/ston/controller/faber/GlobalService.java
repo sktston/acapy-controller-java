@@ -113,15 +113,13 @@ public class GlobalService {
                 }
                 break;
             case "basicmessages":
+                log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print message");
                 String message = JsonPath.read(body, "$.content");
+                log.info("  - message: " + message);
                 if (message.contains("PrivacyPolicyAgreed")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
+                    log.info("- PrivacyPolicyAgreed is contained -> sendCredentialOffer");
                     sendCredentialOffer(JsonPath.read(body, "$.connection_id"));
                 }
-                else {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print message");
-                }
-                log.info("  - message: " + JsonPath.read(body, "$.content"));
                 break;
             case "revocation_registry":
             case "issuer_cred_rev":
