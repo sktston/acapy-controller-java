@@ -30,7 +30,6 @@ services:
                  "--auto-respond-credential-request",
                  "--auto-store-credential",
                  "--auto-verify-presentation",
-                 "--auto-respond-messages",
                  "--preserve-exchange-records",
                  "--log-level", "info",
                  "--trace",
