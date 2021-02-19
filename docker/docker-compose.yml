@@ -40,8 +40,7 @@ services:
                  "--multitenant-admin",
                  "--jwt-secret", "secret",
                  "--auto-provision",
-                 "--public-invites",
-                 "--invite-public"]
+                 "--public-invites"]
 
 networks:
   acapy:
