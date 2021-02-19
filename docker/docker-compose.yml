@@ -40,7 +40,8 @@ services:
                  "--multitenant-admin",
                  "--jwt-secret", "secret",
                  "--auto-provision",
-                 "--public-invites"]
+                 "--invite-base-url", "https://invite-base-url",
+                 "--public-invites" ]
 
 networks:
   acapy:

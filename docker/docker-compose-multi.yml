@@ -46,6 +46,7 @@ services:
                  "--multitenant-admin",
                  "--jwt-secret", "secret",
                  "--auto-provision",
+                 "--invite-base-url", "https://invite-base-url",
                  "--public-invites"]
 
   acapy-agent-2:
