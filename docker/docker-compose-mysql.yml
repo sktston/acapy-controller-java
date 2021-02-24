@@ -1,0 +1,68 @@
+version: '3'
+
+services:
+  acapy-agent-mysql:
+    build:
+      context: https://github.com/sktston/aries-cloudagent-python.git#develop
+      dockerfile: ./docker/Dockerfile.run-wait
+    ports:
+      - 8020-8021:8020-8021
+    networks:
+      - acapy
+    depends_on:
+      - mysql
+    entrypoint: ["./wait-for-it.sh", "mysql:3306", "--", "aca-py",
+                 "start",
+                 "--admin", "0.0.0.0", "8021",
+                 "--admin-insecure-mode",
+                 "--endpoint", "http://host.docker.internal:8020",
+                 "--tails-server-base-url", "http://221.168.33.78:6543",
+                 "--storage-type", "indy",
+                 "--genesis-url", "http://221.168.33.78:9000/genesis",
+                 "--inbound-transport", "http", "0.0.0.0", "8020",
+                 "--outbound-transport", "http",
+                 "--label", "base.agent",
+                 "--public-invites",
+                 "--wallet-local-did",
+                 "--wallet-type", "indy",
+                 "--wallet-name", "base",
+                 "--wallet-key", "base.key",
+                 "--wallet-storage-type", "mysql",
+                 "--wallet-storage-config", "{\"db_name\":\"wallet\",\"port\":3306,\"write_host\":\"mysql\",\"read_host\":\"mysql\"}",
+                 "--wallet-storage-creds", "{\"user\":\"mysql\",\"pass\":\"mysecretpassword\"}",
+                 "--auto-accept-invites",
+                 "--auto-accept-requests",
+                 "--auto-ping-connection",
+                 "--auto-respond-credential-request",
+                 "--auto-store-credential",
+                 "--auto-verify-presentation",
+                 "--preserve-exchange-records",
+                 "--log-level", "info",
+                 "--trace",
+                 "--trace-target", "log",
+                 "--trace-tag", "agent.events",
+                 "--trace-label", "agent.trace",
+                 "--multitenant",
+                 "--multitenant-admin",
+                 "--jwt-secret", "secret",
+                 "--auto-provision",
+                 "--invite-base-url", "https://invite-base-url",
+                 "--public-invites"]
+
+  mysql:
+    image: mysql:5
+    environment:
+      - MYSQL_ROOT_PASSWORD=mysecretpassword
+      - MYSQL_DATABASE=wallet
+      - MYSQL_USER=mysql
+      - MYSQL_PASSWORD=mysecretpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - "./schema.sql:/docker-entrypoint-initdb.d/1.sql"
+    command: mysqld --character-set-server=utf8 --collation-server=utf8_general_ci
+    networks:
+      - acapy
+
+networks:
+  acapy:

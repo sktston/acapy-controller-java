@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  acapy-agent-1:
+  acapy-agent-postgres:
     build:
       context: https://github.com/sktston/aries-cloudagent-python.git#develop
       dockerfile: ./docker/Dockerfile.run-wait
@@ -48,54 +48,6 @@ services:
                  "--auto-provision",
                  "--invite-base-url", "https://invite-base-url",
                  "--public-invites"]
-
-  acapy-agent-2:
-    build:
-      context: https://github.com/sktston/aries-cloudagent-python.git#develop
-      dockerfile: ./docker/Dockerfile.run-wait
-    ports:
-      - 8030-8031:8030-8031
-    networks:
-      - acapy
-    depends_on:
-      - postgres
-    entrypoint: [ "./wait-for-it.sh", "acapy-agent-1:8021", "--", "aca-py",
-                  "start",
-                  "--admin", "0.0.0.0", "8031",
-                  "--admin-insecure-mode",
-                  "--endpoint", "http://host.docker.internal:8030",
-                  "--tails-server-base-url", "http://221.168.33.78:6543",
-                  "--storage-type", "indy",
-                  "--genesis-url", "http://221.168.33.78:9000/genesis",
-                  "--inbound-transport", "http", "0.0.0.0", "8030",
-                  "--outbound-transport", "http",
-                  "--label", "base.agent",
-                  "--public-invites",
-                  "--wallet-local-did",
-                  "--wallet-type", "indy",
-                  "--wallet-name", "base",
-                  "--wallet-key", "base.key",
-                  "--wallet-storage-type", "postgres_storage",
-                  "--wallet-storage-config", "{\"url\":\"postgres:5432\",\"wallet_scheme\":\"MultiWalletSingleTableSharedPool\"}",
-                  "--wallet-storage-creds", "{\"account\":\"postgres\",\"password\":\"mysecretpassword\",\"admin_account\":\"postgres\",\"admin_password\":\"mysecretpassword\"}",
-                  "--auto-accept-invites",
-                  "--auto-accept-requests",
-                  "--auto-ping-connection",
-                  "--auto-respond-credential-request",
-                  "--auto-store-credential",
-                  "--auto-verify-presentation",
-                  "--preserve-exchange-records",
-                  "--log-level", "info",
-                  "--trace",
-                  "--trace-target", "log",
-                  "--trace-tag", "agent.events",
-                  "--trace-label", "agent.trace",
-                  "--multitenant",
-                  "--multitenant-admin",
-                  "--jwt-secret", "secret",
-                  "--auto-provision",
-                  "--public-invites",
-                  "--invite-public" ]
 
   postgres:
     image: postgres
