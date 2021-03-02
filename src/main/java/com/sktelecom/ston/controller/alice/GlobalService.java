@@ -1,6 +1,7 @@
 package com.sktelecom.ston.controller.alice;
 
 import com.jayway.jsonpath.JsonPath;
+import com.sktelecom.ston.controller.utils.HttpClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +17,8 @@ import static com.sktelecom.ston.controller.utils.Common.*;
 @Service
 @Slf4j
 public class GlobalService {
+    private final HttpClient client = new HttpClient();
+
     // agent configurations
     final String[] apiUrls = {"http://localhost:8021"};
     //final String[] apiUrls = {"http://localhost:8021", "http://localhost:8031"}; // with docker-compose-multi.yml
@@ -124,14 +127,14 @@ public class GlobalService {
                 "  wallet_webhook_urls: ['" + webhookUrl + "']" +
                 "}").jsonString();
         log.info("Create a new wallet:" + prettyJson(body));
-        String response = requestPOST(randomStr(apiUrls) + "/multitenancy/wallet", null, body);
+        String response = client.requestPOST(randomStr(apiUrls) + "/multitenancy/wallet", null, body);
         log.info("response:" + response);
         walletId = JsonPath.read(response, "$.settings.['wallet.id']");
         jwtToken = JsonPath.read(response, "$.token");
     }
 
     public void receiveInvitation() {
-        String invitationUrl = requestGET(faberControllerUrl + "/invitation-url", "");
+        String invitationUrl = client.requestGET(faberControllerUrl + "/invitation-url", "");
         log.info("invitation-url: " + invitationUrl);
         String invitation = parseInvitationUrl(invitationUrl);
         if (invitation == null) {
@@ -139,23 +142,23 @@ public class GlobalService {
             return;
         }
         log.info("invitation: " + invitation);
-        String response = requestPOST(randomStr(apiUrls) + "/connections/receive-invitation", jwtToken, invitation);
+        String response = client.requestPOST(randomStr(apiUrls) + "/connections/receive-invitation", jwtToken, invitation);
     }
 
     public void sendPrivacyPolicyAgreed(String connectionId) {
         String body = JsonPath.parse("{" +
                 "  content: 'PrivacyPolicyAgreed'," +
                 "}").jsonString();
-        String response = requestPOST(randomStr(apiUrls) + "/connections/" + connectionId + "/send-message", jwtToken, body);
+        String response = client.requestPOST(randomStr(apiUrls) + "/connections/" + connectionId + "/send-message", jwtToken, body);
     }
 
     public void sendCredentialRequest(String credExId) {
-        String response = requestPOST(randomStr(apiUrls) + "/issue-credential/records/" + credExId + "/send-request", jwtToken, "{}");
+        String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/records/" + credExId + "/send-request", jwtToken, "{}");
     }
 
     public void sendProof(String reqBody) {
         String presExId = JsonPath.read(reqBody, "$.presentation_exchange_id");
-        String response = requestGET(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/credentials", jwtToken);
+        String response = client.requestGET(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/credentials", jwtToken);
 
         ArrayList<LinkedHashMap<String, Object>> credentials = JsonPath.read(response, "$");
         int credRevId = 0;
@@ -189,12 +192,12 @@ public class GlobalService {
                 .put("$", "requested_predicates", reqPreds)
                 .put("$", "self_attested_attributes", selfAttrs).jsonString();
 
-        response = requestPOST(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/send-presentation", jwtToken, body);
+        response = client.requestPOST(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/send-presentation", jwtToken, body);
     }
 
     public void deleteWallet() {
         log.info("Delete my wallet - walletName: " + walletName + ", walletId: " + walletId);
-        String response = requestPOST(randomStr(apiUrls) + "/multitenancy/wallet/" + walletId + "/remove", null, "{}");
+        String response = client.requestPOST(randomStr(apiUrls) + "/multitenancy/wallet/" + walletId + "/remove", null, "{}");
     }
 
     public void deleteWalletAndExit() {

@@ -7,6 +7,7 @@ import com.google.zxing.client.j2se.MatrixToImageConfig;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.jayway.jsonpath.JsonPath;
+import com.sktelecom.ston.controller.utils.HttpClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +29,8 @@ import static com.sktelecom.ston.controller.utils.Common.*;
 @Service
 @Slf4j
 public class GlobalService {
+    private final HttpClient client = new HttpClient();
+
     // agent configurations
     final String[] apiUrls = {"http://localhost:8021"};
     //final String[] apiUrls = {"http://localhost:8021", "http://localhost:8031"}; // with docker-compose-multi.yml
@@ -60,7 +63,7 @@ public class GlobalService {
 
     public String createInvitation() {
         String params = "?public=true";
-        String response = requestPOST(randomStr(apiUrls) + "/connections/create-invitation" + params, jwtToken, "{}");
+        String response = client.requestPOST(randomStr(apiUrls) + "/connections/create-invitation" + params, jwtToken, "{}");
         String invitation = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation")).jsonString();
         log.info("createInvitation <<< invitation:" + invitation);
         return invitation;
@@ -68,7 +71,7 @@ public class GlobalService {
 
     public String createInvitationUrl() {
         String params = "?public=true";
-        String response = requestPOST(randomStr(apiUrls) + "/connections/create-invitation" + params, jwtToken, "{}");
+        String response = client.requestPOST(randomStr(apiUrls) + "/connections/create-invitation" + params, jwtToken, "{}");
         String invitationUrl = JsonPath.read(response, "$.invitation_url");
         log.info("createInvitationUrl <<< invitationUrl:" + invitationUrl);
         return invitationUrl;
@@ -178,14 +181,14 @@ public class GlobalService {
                 "  wallet_webhook_urls: ['" + webhookUrl + "']" +
                 "}").jsonString();
         log.info("Create a new wallet:" + prettyJson(body));
-        String response = requestPOST(randomStr(apiUrls) + "/multitenancy/wallet", null, body);
+        String response = client.requestPOST(randomStr(apiUrls) + "/multitenancy/wallet", null, body);
         log.info("response:" + response);
         walletId = JsonPath.read(response, "$.settings.['wallet.id']");
         jwtToken = JsonPath.read(response, "$.token");
 
         body = JsonPath.parse("{ seed: '" + seed + "'}").jsonString();
         log.info("Create a new local did:" + prettyJson(body));
-        response = requestPOST(randomStr(apiUrls) + "/wallet/did/create", jwtToken, body);
+        response = client.requestPOST(randomStr(apiUrls) + "/wallet/did/create", jwtToken, body);
         log.info("response:" + response);
         did = JsonPath.read(response, "$.result.did");
         verkey = JsonPath.read(response, "$.result.verkey");
@@ -197,7 +200,7 @@ public class GlobalService {
         String params = "?wallet_name=" + stewardWallet;
 
         // check if steward wallet already exists
-        String response = requestGET(randomStr(apiUrls) + "/multitenancy/wallets" + params, null);
+        String response = client.requestGET(randomStr(apiUrls) + "/multitenancy/wallets" + params, null);
         ArrayList<LinkedHashMap<String, Object>> wallets = JsonPath.read(response, "$.results");
 
         if (wallets.isEmpty()) {
@@ -208,19 +211,19 @@ public class GlobalService {
                     "  wallet_type: 'indy'," +
                     "}").jsonString();
             log.info("Not found steward wallet - Create a new steward wallet:" + prettyJson(body));
-            response = requestPOST(randomStr(apiUrls) + "/multitenancy/wallet", null, body);
+            response = client.requestPOST(randomStr(apiUrls) + "/multitenancy/wallet", null, body);
             log.info("response:" + response);
             String jwtToken = JsonPath.read(response, "$.token");
 
             body = JsonPath.parse("{ seed: '" + stewardSeed + "'}").jsonString();
             log.info("Create a steward did:" + prettyJson(body));
-            response = requestPOST(randomStr(apiUrls) + "/wallet/did/create", jwtToken, body);
+            response = client.requestPOST(randomStr(apiUrls) + "/wallet/did/create", jwtToken, body);
             log.info("response:" + response);
             String did = JsonPath.read(response, "$.result.did");
 
             params = "?did=" + did;
             log.info("Assign the did to public: " + did);
-            response = requestPOST(randomStr(apiUrls) + "/wallet/did/public" + params, jwtToken, "{}");
+            response = client.requestPOST(randomStr(apiUrls) + "/wallet/did/public" + params, jwtToken, "{}");
             log.info("response: " + response);
 
             return jwtToken;
@@ -231,7 +234,7 @@ public class GlobalService {
             String stewardWalletId = JsonPath.read(element, "$.wallet_id");
 
             log.info("Found steward wallet - Get jwt token with wallet id: " + stewardWalletId);
-            response = requestPOST(randomStr(apiUrls) + "/multitenancy/wallet/" + stewardWalletId + "/token", null, "{}");
+            response = client.requestPOST(randomStr(apiUrls) + "/multitenancy/wallet/" + stewardWalletId + "/token", null, "{}");
             log.info("response: " + response);
 
             return JsonPath.read(response, "$.token");
@@ -244,12 +247,12 @@ public class GlobalService {
                 "&alias=" + walletName +
                 "&role=ENDORSER";
         log.info("Register the did to the ledger as a ENDORSER");
-        String response = requestPOST(randomStr(apiUrls) + "/ledger/register-nym" + params, stewardJwtToken, "{}");
+        String response = client.requestPOST(randomStr(apiUrls) + "/ledger/register-nym" + params, stewardJwtToken, "{}");
         log.info("response: " + response);
 
         params = "?did=" + did;
         log.info("Assign the did to public: " + did);
-        response = requestPOST(randomStr(apiUrls) + "/wallet/did/public" + params, jwtToken, "{}");
+        response = client.requestPOST(randomStr(apiUrls) + "/wallet/did/public" + params, jwtToken, "{}");
         log.info("response: " + response);
     }
 
@@ -260,7 +263,7 @@ public class GlobalService {
                 "  attributes: ['name', 'date', 'degree', 'age']" +
                 "}").jsonString();
         log.info("Create a new schema on the ledger:" + prettyJson(body));
-        String response = requestPOST(randomStr(apiUrls) + "/schemas", jwtToken, body);
+        String response = client.requestPOST(randomStr(apiUrls) + "/schemas", jwtToken, body);
         schemaId = JsonPath.read(response, "$.schema_id");
     }
 
@@ -272,7 +275,7 @@ public class GlobalService {
                 "  revocation_registry_size: 10" +
                 "}").jsonString();
         log.info("Create a new credential definition on the ledger:" + prettyJson(body));
-        String response = requestPOST(randomStr(apiUrls) + "/credential-definitions", jwtToken, body);
+        String response = client.requestPOST(randomStr(apiUrls) + "/credential-definitions", jwtToken, body);
         credDefId = JsonPath.read(response, "$.credential_definition_id");
     }
 
@@ -280,7 +283,7 @@ public class GlobalService {
         String body = JsonPath.parse("{" +
                 "  content: 'PrivacyPolicyOffer. Content here. If you agree, send me a message. PrivacyPolicyAgreed'," +
                 "}").jsonString();
-        String response = requestPOST(randomStr(apiUrls) + "/connections/" + connectionId + "/send-message", jwtToken, body);
+        String response = client.requestPOST(randomStr(apiUrls) + "/connections/" + connectionId + "/send-message", jwtToken, body);
     }
 
     public void sendCredentialOffer(String connectionId) {
@@ -297,7 +300,7 @@ public class GlobalService {
                 "    ]" +
                 "  }" +
                 "}").jsonString();
-        String response = requestPOST(randomStr(apiUrls) + "/issue-credential/send-offer", jwtToken, body);
+        String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/send-offer", jwtToken, body);
     }
 
     public void sendProofRequest(String connectionId) {
@@ -335,7 +338,7 @@ public class GlobalService {
                 "    }" +
                 "  }" +
                 "}").jsonString();
-        String response = requestPOST(randomStr(apiUrls) + "/present-proof/send-request", jwtToken, body);
+        String response = client.requestPOST(randomStr(apiUrls) + "/present-proof/send-request", jwtToken, body);
     }
 
     public void printProofResult(String body) {
@@ -352,7 +355,7 @@ public class GlobalService {
                 "  cred_rev_id: '" + credRevId + "'," +
                 "  publish: true" +
                 "}").jsonString();
-        String response =  requestPOST(randomStr(apiUrls) + "/revocation/revoke", jwtToken, body);
+        String response =  client.requestPOST(randomStr(apiUrls) + "/revocation/revoke", jwtToken, body);
         log.info("response: " + response);
     }
 
