@@ -59,7 +59,7 @@ public class HttpClient {
     public String requestPATCH(String url, String token, String json) {
         Request request = new Request.Builder()
                 .url(url)
-                .patch(RequestBody.create(json, MediaType.parse("application/json")))
+                .patch(RequestBody.create(json, JSON_TYPE))
                 .build();
         request = addToken(request, token);
         return raw(request);
