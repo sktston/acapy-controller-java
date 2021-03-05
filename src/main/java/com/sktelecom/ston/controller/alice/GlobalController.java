@@ -18,7 +18,7 @@ public class GlobalController {
     public ResponseEntity webhooksTopicHandler(
             @PathVariable String topic,
             @RequestBody String body) {
-        globalService.handleMessage(topic, body);
+        globalService.handleEvent(topic, body);
         return ResponseEntity.ok().build();
     }
 

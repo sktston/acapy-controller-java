@@ -52,26 +52,32 @@ public class GlobalService {
         receiveInvitation();
     }
 
-    public void handleMessage(String topic, String body) {
-        log.info("handleMessage >>> topic:" + topic + ", body:" + body);
+    public void handleEvent(String topic, String body) {
+        String state = topic.equals("problem_report") ? "" : JsonPath.read(body, "$.state");
+        log.info("handleEvent >>> topic:" + topic + ", state:" + state + ", body:" + body);
 
-        String state = topic.equals("problem_report") ? null : JsonPath.read(body, "$.state");
         switch(topic) {
             case "connections":
-                log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
+                if (state.equals("active")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialProposal");
+                    sendCredentialProposal(JsonPath.read(body, "$.connection_id"));
+                    //sendPrivacyPolicyOffer(JsonPath.read(body, "$.connection_id"));
+                }
                 break;
             case "issue_credential":
-                // When credential offer is received, send credential request
                 if (state.equals("offer_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequest");
                     sendCredentialRequest(JsonPath.read(body, "$.credential_exchange_id"));
                 }
-                else {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
+                break;
+            case "basicmessages":
+                String content = JsonPath.read(body, "$.content");
+                if (content.contains("PrivacyPolicyOffer")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyOffer) -> sendPrivacyPolicyAgreed");
+                    sendPrivacyPolicyAgreed(JsonPath.read(body, "$.connection_id"));
                 }
                 break;
             case "present_proof":
-                // When proof request is received, send proof(presentation)
                 if (state.equals("request_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProof");
                     sendProof(body);
@@ -80,22 +86,13 @@ public class GlobalService {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> deleteWalletAndExit");
                     deleteWalletAndExit();
                 }
-                else {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
-                }
-                break;
-            case "basicmessages":
-                log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print message");
-                String message = JsonPath.read(body, "$.content");
-                log.info("  - message: " + message);
-                if (message.contains("PrivacyPolicyOffer")) {
-                    log.info("- PrivacyPolicyOffer is contained -> sendPrivacyPolicyAgreed");
-                    sendPrivacyPolicyAgreed(JsonPath.read(body, "$.connection_id"));
-                }
                 break;
             case "problem_report":
                 log.warn("- Case (topic:" + topic + ") -> Print body");
                 log.warn("  - body:" + prettyJson(body));
+                break;
+            case "revocation_registry":
+            case "issuer_cred_rev":
                 break;
             default:
                 log.warn("- Warning Unexpected topic:" + topic);
@@ -143,6 +140,16 @@ public class GlobalService {
         }
         log.info("invitation: " + invitation);
         String response = client.requestPOST(randomStr(apiUrls) + "/connections/receive-invitation", jwtToken, invitation);
+    }
+
+    public void sendCredentialProposal(String connectionId) {
+
+        String body = JsonPath.parse("{" +
+                "  connection_id: '" + connectionId  + "'," +
+                // uncomment below if you want to specify credential definition id to faber
+                //"  cred_def_id: 'TCXu9qcEoRYX9jWT6CBFAy:3:CL:1614837027:tag'," +
+                "}").jsonString();
+        String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/send-proposal", jwtToken, body);
     }
 
     public void sendPrivacyPolicyAgreed(String connectionId) {

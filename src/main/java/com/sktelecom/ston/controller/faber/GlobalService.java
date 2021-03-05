@@ -77,60 +77,46 @@ public class GlobalService {
         return invitationUrl;
     }
 
-    public void handleMessage(String topic, String body) {
-        log.info("handleMessage >>> topic:" + topic + ", body:" + body);
+    public void handleEvent(String topic, String body) {
+        String state = topic.equals("problem_report") ? "" : JsonPath.read(body, "$.state");
+        log.info("handleEvent >>> topic:" + topic + ", state:" + state + ", body:" + body);
 
-        String state = topic.equals("problem_report") ? null : JsonPath.read(body, "$.state");
         switch(topic) {
             case "connections":
-                // When connection with alice is done, send credential offer
-                if (state.equals("active")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPrivacyPolicyOffer");
-                    sendPrivacyPolicyOffer(JsonPath.read(body, "$.connection_id"));
-                }
-                else {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
-                }
                 break;
             case "issue_credential":
-                // When credential is issued and acked, send proof(presentation) request
-                if (state.equals("credential_acked")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProofRequest");
+                if (state.equals("proposal_received")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
+                    String credentialProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.credential_proposal_dict")).jsonString();
+                    sendCredentialOffer(JsonPath.read(body, "$.connection_id"), credentialProposal);
+                }
+                else if (state.equals("credential_acked")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPrivacyPolicyOffer");
                     if (enableRevoke) {
                         revokeCredential(JsonPath.read(body, "$.revoc_reg_id"), JsonPath.read(body, "$.revocation_id"));
                     }
-                    sendProofRequest(JsonPath.read(body, "$.connection_id"));
+                    sendPrivacyPolicyOffer(JsonPath.read(body, "$.connection_id"));
                 }
-                else {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
+                break;
+            case "basicmessages":
+                String content = JsonPath.read(body, "$.content");
+                if (content.contains("PrivacyPolicyAgreed")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyAgreed) -> sendProofRequest");
+                    sendProofRequest(JsonPath.read(body, "$.connection_id"));
                 }
                 break;
             case "present_proof":
-                // When proof is verified, print the result
                 if (state.equals("verified")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print result");
                     printProofResult(body);
                 }
-                else {
-                    log.info("- Case (topic:topic:" + topic + ", state:" + state + ") -> No action in demo");
-                }
-                break;
-            case "basicmessages":
-                log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print message");
-                String message = JsonPath.read(body, "$.content");
-                log.info("  - message: " + message);
-                if (message.contains("PrivacyPolicyAgreed")) {
-                    log.info("- PrivacyPolicyAgreed is contained -> sendCredentialOffer");
-                    sendCredentialOffer(JsonPath.read(body, "$.connection_id"));
-                }
-                break;
-            case "revocation_registry":
-            case "issuer_cred_rev":
-                log.info("- Case (topic:" + topic + ", state:" + state + ") -> No action in demo");
                 break;
             case "problem_report":
                 log.warn("- Case (topic:" + topic + ") -> Print body");
                 log.warn("  - body:" + prettyJson(body));
+                break;
+            case "revocation_registry":
+            case "issuer_cred_rev":
                 break;
             default:
                 log.warn("- Warning Unexpected topic:" + topic);
@@ -279,14 +265,9 @@ public class GlobalService {
         credDefId = JsonPath.read(response, "$.credential_definition_id");
     }
 
-    public void sendPrivacyPolicyOffer(String connectionId) {
-        String body = JsonPath.parse("{" +
-                "  content: 'PrivacyPolicyOffer. Content here. If you agree, send me a message. PrivacyPolicyAgreed'," +
-                "}").jsonString();
-        String response = client.requestPOST(randomStr(apiUrls) + "/connections/" + connectionId + "/send-message", jwtToken, body);
-    }
-
-    public void sendCredentialOffer(String connectionId) {
+    public void sendCredentialOffer(String connectionId, String credentialProposal) {
+        // uncomment below if you want to get specified credential definition id from alice
+        //String credDefId = JsonPath.read(credentialProposal, "$.cred_def_id");
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId + "'," +
                 "  cred_def_id: '" + credDefId + "'," +
@@ -301,6 +282,13 @@ public class GlobalService {
                 "  }" +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/send-offer", jwtToken, body);
+    }
+
+    public void sendPrivacyPolicyOffer(String connectionId) {
+        String body = JsonPath.parse("{" +
+                "  content: 'PrivacyPolicyOffer. Content here. If you agree, send me a message. PrivacyPolicyAgreed'," +
+                "}").jsonString();
+        String response = client.requestPOST(randomStr(apiUrls) + "/connections/" + connectionId + "/send-message", jwtToken, body);
     }
 
     public void sendProofRequest(String connectionId) {
