@@ -61,7 +61,6 @@ public class GlobalService {
                 if (state.equals("active")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialProposal");
                     sendCredentialProposal(JsonPath.read(body, "$.connection_id"));
-                    //sendPrivacyPolicyOffer(JsonPath.read(body, "$.connection_id"));
                 }
                 break;
             case "issue_credential":
