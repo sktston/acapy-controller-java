@@ -271,7 +271,8 @@ public class GlobalService {
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId + "'," +
                 "  cred_def_id: '" + credDefId + "'," +
-                "  credential_preview: {" +
+                "  comment: 'credential_comment'," +
+                "  credential_proposal: {" +
                 "    @type: 'https://didcomm.org/issue-credential/1.0/credential-preview'," +
                 "    attributes: [" +
                 "      { name: 'name', value: 'alice' }," +
@@ -281,7 +282,7 @@ public class GlobalService {
                 "    ]" +
                 "  }" +
                 "}").jsonString();
-        String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/send-offer", jwtToken, body);
+        String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/send", jwtToken, body);
     }
 
     public void sendPrivacyPolicyOffer(String connectionId) {
