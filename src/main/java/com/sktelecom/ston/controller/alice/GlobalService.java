@@ -145,7 +145,7 @@ public class GlobalService {
 
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId  + "'," +
-                // uncomment below if you want to specify credential definition id to faber
+                // uncomment below if you want to request specific credential definition id to faber
                 //"  cred_def_id: 'TCXu9qcEoRYX9jWT6CBFAy:3:CL:1614837027:tag'," +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/send-proposal", jwtToken, body);

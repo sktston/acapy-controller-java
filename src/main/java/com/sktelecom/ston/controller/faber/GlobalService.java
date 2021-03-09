@@ -266,8 +266,8 @@ public class GlobalService {
     }
 
     public void sendCredentialOffer(String connectionId, String credentialProposal) {
-        // uncomment below if you want to get specified credential definition id from alice
-        //String credDefId = JsonPath.read(credentialProposal, "$.cred_def_id");
+        // uncomment below if you want to get requested credential definition id from alice
+        //String requestedCredDefId = JsonPath.read(credentialProposal, "$.cred_def_id");
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId + "'," +
                 "  cred_def_id: '" + credDefId + "'," +
