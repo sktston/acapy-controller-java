@@ -1,11 +1,5 @@
 package com.sktelecom.ston.controller.faber;
 
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.MultiFormatWriter;
-import com.google.zxing.WriterException;
-import com.google.zxing.client.j2se.MatrixToImageConfig;
-import com.google.zxing.client.j2se.MatrixToImageWriter;
-import com.google.zxing.common.BitMatrix;
 import com.jayway.jsonpath.JsonPath;
 import com.sktelecom.ston.controller.utils.HttpClient;
 import lombok.RequiredArgsConstructor;
@@ -13,12 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.util.Assert;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.UUID;
@@ -52,6 +42,7 @@ public class GlobalService {
     String verkey; // verification key
     String schemaId; // schema identifier
     String credDefId; // credential definition identifier
+    String photoFileName = "images/alice.jpg";
 
     // check options
     static boolean enableRevoke = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_REVOKE", "false"));
@@ -246,7 +237,7 @@ public class GlobalService {
         String body = JsonPath.parse("{" +
                 "  schema_name: 'degree_schema'," +
                 "  schema_version: '" + version + "'," +
-                "  attributes: ['name', 'date', 'degree', 'age']" +
+                "  attributes: ['name', 'date', 'degree', 'age', 'photo']" +
                 "}").jsonString();
         log.info("Create a new schema on the ledger:" + prettyJson(body));
         String response = client.requestPOST(randomStr(apiUrls) + "/schemas", jwtToken, body);
@@ -268,6 +259,11 @@ public class GlobalService {
     public void sendCredentialOffer(String connectionId, String credentialProposal) {
         // uncomment below if you want to get requested credential definition id from alice
         //String requestedCredDefId = JsonPath.read(credentialProposal, "$.cred_def_id");
+
+        String encodedImage = "";
+        try {
+            encodedImage = encodeFileToBase64Binary(photoFileName);
+        } catch (Exception e) { e.printStackTrace(); }
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId + "'," +
                 "  cred_def_id: '" + credDefId + "'," +
@@ -278,7 +274,8 @@ public class GlobalService {
                 "      { name: 'name', value: 'alice' }," +
                 "      { name: 'date', value: '05-2018' }," +
                 "      { name: 'degree', value: 'maths' }," +
-                "      { name: 'age', value: '25' }" +
+                "      { name: 'age', value: '25' }," +
+                "      { name: 'photo', value: '" + encodedImage + "', mime-type: 'image/jpeg' }" +
                 "    ]" +
                 "  }" +
                 "}").jsonString();
@@ -300,24 +297,29 @@ public class GlobalService {
                 "    name: 'proof_name'," +
                 "    version: '1.0'," +
                 "    requested_attributes: {" +
-                "      attr_name: {" +
+                "      name: {" +
                 "        name: 'name'," +
                 "        non_revoked: { from: 0, to: " + curUnixTime + " }," +
                 "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
                 "      }," +
-                "      attr_date: {" +
+                "      date: {" +
                 "        name: 'date'," +
                 "        non_revoked: { from: 0, to: " + curUnixTime + " }," +
                 "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
                 "      }," +
-                "      attr_degree: {" +
+                "      degree: {" +
                 "        name: 'degree'," +
+                "        non_revoked: { from: 0, to: " + curUnixTime + " }," +
+                "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
+                "      }," +
+                "      photo: {" +
+                "        name: 'photo'," +
                 "        non_revoked: { from: 0, to: " + curUnixTime + " }," +
                 "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
                 "      }" +
                 "    }," +
                 "    requested_predicates: {" +
-                "      pred_age: {" +
+                "      age: {" +
                 "        name: 'age'," +
                 "        p_type: '>='," +
                 "        p_value: 20," +
@@ -346,22 +348,6 @@ public class GlobalService {
                 "}").jsonString();
         String response =  client.requestPOST(randomStr(apiUrls) + "/revocation/revoke", jwtToken, body);
         log.info("response: " + response);
-    }
-
-    public byte[] generateQRCode(String text, int width, int height) {
-
-        Assert.hasText(text, "text must not be empty");
-        Assert.isTrue(width > 0, "width must be greater than zero");
-        Assert.isTrue(height > 0, "height must be greater than zero");
-
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        try {
-            BitMatrix matrix = new MultiFormatWriter().encode(text, BarcodeFormat.QR_CODE, width, height);
-            MatrixToImageWriter.writeToStream(matrix, MediaType.IMAGE_PNG.getSubtype(), outputStream, new MatrixToImageConfig());
-        } catch (IOException | WriterException e) {
-            e.printStackTrace();
-        }
-        return outputStream.toByteArray();
     }
 
 }

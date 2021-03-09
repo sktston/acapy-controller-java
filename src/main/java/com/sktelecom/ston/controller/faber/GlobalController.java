@@ -7,6 +7,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import static com.sktelecom.ston.controller.utils.Common.*;
+
 @RequiredArgsConstructor
 @Slf4j
 @RestController
@@ -36,7 +38,7 @@ public class GlobalController {
     @GetMapping(value = "/invitation-qr", produces = MediaType.IMAGE_PNG_VALUE)
     public byte[] getInvitationUrlQRCode() {
         String invitationUrl = globalService.createInvitationUrl();
-        return globalService.generateQRCode(invitationUrl, 300, 300);
+        return generateQRCode(invitationUrl, 300, 300);
     }
 
 }
