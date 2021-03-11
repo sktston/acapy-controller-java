@@ -13,8 +13,8 @@ public class HttpClient {
     static final MediaType JSON_TYPE = MediaType.parse("application/json");
     static final int timeout = 3600; // 1 hour
 
-    // Reduce keepAliveDuration from default 5 minutes to 60 seconds
-    final ConnectionPool connectionPool = new ConnectionPool(5, 60, TimeUnit.SECONDS);
+    // Reduce keepAliveDuration from default 5 minutes to 110 seconds
+    final ConnectionPool connectionPool = new ConnectionPool(5, 110, TimeUnit.SECONDS);
 
     final OkHttpClient client = new OkHttpClient.Builder()
             .writeTimeout(timeout, TimeUnit.SECONDS)
