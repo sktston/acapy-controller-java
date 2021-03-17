@@ -82,7 +82,7 @@ public class GlobalService {
                     sendCredentialOffer(JsonPath.read(body, "$.connection_id"), credentialProposal);
                 }
                 else if (state.equals("credential_acked")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPrivacyPolicyOffer");
+                    log.info("- Case (topic:" + topic + ", state:" + state + ")");
                     /*
                     if (enableRevoke) {
                         revokeCredential(JsonPath.read(body, "$.revoc_reg_id"), JsonPath.read(body, "$.revocation_id"));
