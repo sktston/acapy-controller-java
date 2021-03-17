@@ -70,7 +70,7 @@ public class GlobalService {
 
     public void handleEvent(String topic, String body) {
         String state = topic.equals("problem_report") ? "" : JsonPath.read(body, "$.state");
-        log.info("handleEvent >>> topic:" + topic + ", state:" + state + ", body:" + body);
+        //log.info("handleEvent >>> topic:" + topic + ", state:" + state + ", body:" + body);
 
         switch(topic) {
             case "connections":
@@ -81,15 +81,15 @@ public class GlobalService {
                     String credentialProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.credential_proposal_dict")).jsonString();
                     sendCredentialOffer(JsonPath.read(body, "$.connection_id"), credentialProposal);
                 }
-                /*
                 else if (state.equals("credential_acked")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPrivacyPolicyOffer");
+                    /*
                     if (enableRevoke) {
                         revokeCredential(JsonPath.read(body, "$.revoc_reg_id"), JsonPath.read(body, "$.revocation_id"));
                     }
                     sendPrivacyPolicyOffer(JsonPath.read(body, "$.connection_id"));
+                     */
                 }
-                 */
                 break;
             case "basicmessages":
                 String content = JsonPath.read(body, "$.content");
