@@ -81,6 +81,7 @@ public class GlobalService {
                     String credentialProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.credential_proposal_dict")).jsonString();
                     sendCredentialOffer(JsonPath.read(body, "$.connection_id"), credentialProposal);
                 }
+                /*
                 else if (state.equals("credential_acked")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPrivacyPolicyOffer");
                     if (enableRevoke) {
@@ -88,6 +89,7 @@ public class GlobalService {
                     }
                     sendPrivacyPolicyOffer(JsonPath.read(body, "$.connection_id"));
                 }
+                 */
                 break;
             case "basicmessages":
                 String content = JsonPath.read(body, "$.content");

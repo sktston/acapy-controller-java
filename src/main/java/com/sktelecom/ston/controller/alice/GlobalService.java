@@ -22,7 +22,6 @@ public class GlobalService {
     // agent configurations
     final String[] apiUrls = {"http://localhost:8021"};
     //final String[] apiUrls = {"http://localhost:8021", "http://localhost:8031"}; // with docker-compose-multi.yml
-    int iterations = 1; // for long-term test
 
     // controller configurations
     @Value("${controllerUrl}")
@@ -40,12 +39,16 @@ public class GlobalService {
     private String faberControllerUrl; // FIXME: adjust url in application-alice.properties
 
     // time calc
+    int iterations = 200; // for long-term test
     long beforeTime;
     long afterTime;
+    long proposalTime;
+    long ackTime;
+    int counter = 0;
+    double totalLatency = 0L;
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
-        beforeTime = System.currentTimeMillis();
         provisionController();
 
         log.info("Receive invitation from faber controller");
@@ -54,19 +57,36 @@ public class GlobalService {
 
     public void handleEvent(String topic, String body) {
         String state = topic.equals("problem_report") ? "" : JsonPath.read(body, "$.state");
-        log.info("handleEvent >>> topic:" + topic + ", state:" + state + ", body:" + body);
+        //log.info("handleEvent >>> topic:" + topic + ", state:" + state + ", body:" + body);
 
         switch(topic) {
             case "connections":
                 if (state.equals("active")) {
+                    beforeTime = System.currentTimeMillis();
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialProposal");
+                    proposalTime = System.currentTimeMillis();
                     sendCredentialProposal(JsonPath.read(body, "$.connection_id"));
                 }
                 break;
             case "issue_credential":
                 if (state.equals("offer_received")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequest");
+                    //log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequest");
                     sendCredentialRequest(JsonPath.read(body, "$.credential_exchange_id"));
+                }
+                else if (state.equals("credential_acked")) {
+                    ackTime = System.currentTimeMillis();
+                    long secDiffTime = ackTime - proposalTime;
+                    totalLatency = totalLatency + secDiffTime;
+
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> counter:" + counter + ", diffTime: " + secDiffTime);
+                    if (++counter == iterations) {
+                        delayedExit();
+                    }
+                    else {
+                        log.info("- counter is less than iterations -> sendCredentialProposal");
+                        proposalTime = System.currentTimeMillis();
+                        sendCredentialProposal(JsonPath.read(body, "$.connection_id"));
+                    }
                 }
                 break;
             case "basicmessages":
@@ -228,5 +248,25 @@ public class GlobalService {
         };
         Timer timer = new Timer("Timer");
         timer.schedule(task, 100L);
+    }
+
+    public void delayedExit() {
+        TimerTask task = new TimerTask() {
+            public void run() {
+                log.info("Alice demo completes - Exit");
+                afterTime = System.currentTimeMillis();
+                long secDiffTime = afterTime - beforeTime;
+                log.info("--------------------------");
+                log.info("Elapsed time (ms): " + secDiffTime);
+                log.info("TPS: " + 100/(((double)secDiffTime)/1000));
+                log.info("--------------------------");
+                log.info("Total latency (ms): " + totalLatency);
+                log.info("iterations: " + iterations);
+                log.info("Average latency (ms): " + totalLatency/iterations);
+                System.exit(0);
+            }
+        };
+        Timer timer = new Timer("Timer");
+        timer.schedule(task, 10L);
     }
 }
