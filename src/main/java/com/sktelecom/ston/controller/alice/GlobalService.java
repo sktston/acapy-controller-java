@@ -10,6 +10,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.sktelecom.ston.controller.utils.Common.*;
 
@@ -44,7 +45,7 @@ public class GlobalService {
     long afterTime;
     long proposalTime;
     long ackTime;
-    int counter = 0;
+    AtomicInteger counter = new AtomicInteger();
     double totalLatency = 0L;
 
     @EventListener(ApplicationReadyEvent.class)
@@ -63,6 +64,7 @@ public class GlobalService {
             case "connections":
                 if (state.equals("active")) {
                     beforeTime = System.currentTimeMillis();
+                    counter.set(0);
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialProposal");
                     proposalTime = System.currentTimeMillis();
                     sendCredentialProposal(JsonPath.read(body, "$.connection_id"));
@@ -78,8 +80,8 @@ public class GlobalService {
                     long secDiffTime = ackTime - proposalTime;
                     totalLatency = totalLatency + secDiffTime;
 
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> counter:" + counter + ", diffTime: " + secDiffTime);
-                    if (++counter == iterations) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> counter:" + counter.get() + ", diffTime: " + secDiffTime);
+                    if (counter.incrementAndGet() == iterations) {
                         delayedExit();
                     }
                     else {
