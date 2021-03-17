@@ -20,7 +20,7 @@ public class GlobalService {
     private final HttpClient client = new HttpClient();
 
     // agent configurations
-    final String[] apiUrls = {"http://localhost:8021"};
+    final String[] apiUrls = {"http://34.64.90.196:8021"};
     //final String[] apiUrls = {"http://localhost:8021", "http://localhost:8031"}; // with docker-compose-multi.yml
 
     // controller configurations
