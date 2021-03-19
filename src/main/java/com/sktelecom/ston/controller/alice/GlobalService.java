@@ -40,9 +40,9 @@ public class GlobalService {
     private String faberControllerUrl; // FIXME: adjust url in application-alice.properties
 
     // time calc
-    int iterations = 200; // for long-term test
-    long beforeTime;
-    long afterTime;
+    int testTime = 120; // seconds
+    long startTime;
+    long endTime;
     long proposalTime;
     long ackTime;
     AtomicInteger counter = new AtomicInteger();
@@ -63,7 +63,7 @@ public class GlobalService {
         switch(topic) {
             case "connections":
                 if (state.equals("active")) {
-                    beforeTime = System.currentTimeMillis();
+                    startTime = System.currentTimeMillis();
                     counter.set(0);
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialProposal");
                     proposalTime = System.currentTimeMillis();
@@ -76,12 +76,14 @@ public class GlobalService {
                     sendCredentialRequest(JsonPath.read(body, "$.credential_exchange_id"));
                 }
                 else if (state.equals("credential_acked")) {
+                    counter.incrementAndGet();
                     ackTime = System.currentTimeMillis();
-                    long secDiffTime = ackTime - proposalTime;
-                    totalLatency = totalLatency + secDiffTime;
+                    long latency = ackTime - proposalTime;
+                    totalLatency = totalLatency + latency;
 
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> counter:" + counter.get() + ", diffTime: " + secDiffTime);
-                    if (counter.incrementAndGet() == iterations) {
+                    long elapsed = ackTime - startTime;
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> counter:" + counter.get() + ", latency: " + latency);
+                    if (elapsed >= testTime * 1000L) {
                         delayedExit();
                     }
                     else {
@@ -105,7 +107,7 @@ public class GlobalService {
                 }
                 else if (state.equals("presentation_acked")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> deleteWalletAndExit");
-                    deleteWalletAndExit();
+                    delayedExit();
                 }
                 break;
             case "problem_report":
@@ -228,43 +230,22 @@ public class GlobalService {
         String response = client.requestPOST(randomStr(apiUrls) + "/multitenancy/wallet/" + walletId + "/remove", null, "{}");
     }
 
-    public void deleteWalletAndExit() {
-        TimerTask task = new TimerTask() {
-            public void run() {
-                deleteWallet();
-                if (--iterations == 0) {
-                    log.info("Alice demo completes - Exit");
-                    afterTime = System.currentTimeMillis();
-                    long secDiffTime = afterTime - beforeTime;
-                    log.info("Elapsed time (ms) : " + secDiffTime);
-                    System.exit(0);
-                }
-                else {
-                    log.info("Remaining iterations : " + iterations);
-                    provisionController();
-
-                    log.info("Receive invitation from faber controller");
-                    receiveInvitation();
-                }
-            }
-        };
-        Timer timer = new Timer("Timer");
-        timer.schedule(task, 100L);
-    }
-
     public void delayedExit() {
         TimerTask task = new TimerTask() {
             public void run() {
                 log.info("Alice demo completes - Exit");
-                afterTime = System.currentTimeMillis();
-                long secDiffTime = afterTime - beforeTime;
+                endTime = System.currentTimeMillis();
+                long elapsed = endTime - startTime;
+                long transNum = counter.get();
+                double elapsedSec = (double) elapsed / 1000L;
+
                 log.info("--------------------------");
-                log.info("Elapsed time (ms): " + secDiffTime);
-                log.info("TPS: " + 100/(((double)secDiffTime)/1000));
+                log.info("Elapsed time (ms): " + elapsed);
+                log.info("TPS: " + transNum/elapsedSec);
                 log.info("--------------------------");
                 log.info("Total latency (ms): " + totalLatency);
-                log.info("iterations: " + iterations);
-                log.info("Average latency (ms): " + totalLatency/iterations);
+                log.info("Number of transactions : " + transNum);
+                log.info("Average latency (ms): " + totalLatency/transNum);
                 System.exit(0);
             }
         };
