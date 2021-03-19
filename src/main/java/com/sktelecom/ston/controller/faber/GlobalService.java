@@ -83,12 +83,10 @@ public class GlobalService {
                 }
                 else if (state.equals("credential_acked")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ")");
-                    /*
                     if (enableRevoke) {
                         revokeCredential(JsonPath.read(body, "$.revoc_reg_id"), JsonPath.read(body, "$.revocation_id"));
                     }
                     sendPrivacyPolicyOffer(JsonPath.read(body, "$.connection_id"));
-                     */
                 }
                 break;
             case "basicmessages":
@@ -100,8 +98,8 @@ public class GlobalService {
                 break;
             case "present_proof":
                 if (state.equals("verified")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> Print result");
-                    printProofResult(body);
+                    log.info("- Case (topic:" + topic + ", state:" + state + ")");
+                    //printProofResult(body);
                 }
                 break;
             case "problem_report":
@@ -320,15 +318,7 @@ public class GlobalService {
                 "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
                 "      }" +
                 "    }," +
-                "    requested_predicates: {" +
-                "      age: {" +
-                "        name: 'age'," +
-                "        p_type: '>='," +
-                "        p_value: 20," +
-                "        non_revoked: { from: 0, to: " + curUnixTime + " }," +
-                "        restrictions: [ {cred_def_id: '" + credDefId + "'} ]" +
-                "      }" +
-                "    }" +
+                "    requested_predicates: {}" +
                 "  }" +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/present-proof/send-request", jwtToken, body);

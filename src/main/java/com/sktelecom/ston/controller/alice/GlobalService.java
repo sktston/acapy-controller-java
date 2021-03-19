@@ -43,7 +43,7 @@ public class GlobalService {
     int testTime = 120; // seconds
     long startTime;
     long endTime;
-    long proposalTime;
+    long proofRequestTime;
     long ackTime;
     AtomicInteger counter = new AtomicInteger();
     double totalLatency = 0L;
@@ -63,22 +63,35 @@ public class GlobalService {
         switch(topic) {
             case "connections":
                 if (state.equals("active")) {
-                    startTime = System.currentTimeMillis();
-                    counter.set(0);
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialProposal");
-                    proposalTime = System.currentTimeMillis();
                     sendCredentialProposal(JsonPath.read(body, "$.connection_id"));
                 }
                 break;
             case "issue_credential":
                 if (state.equals("offer_received")) {
-                    //log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequest");
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequest");
                     sendCredentialRequest(JsonPath.read(body, "$.credential_exchange_id"));
                 }
-                else if (state.equals("credential_acked")) {
+                break;
+            case "basicmessages":
+                String content = JsonPath.read(body, "$.content");
+                if (content.contains("PrivacyPolicyOffer")) {
+                    startTime = System.currentTimeMillis();
+                    counter.set(0);
+                    proofRequestTime = System.currentTimeMillis();
+                    log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyOffer) -> sendPrivacyPolicyAgreed");
+                    sendPrivacyPolicyAgreed(JsonPath.read(body, "$.connection_id"));
+                }
+                break;
+            case "present_proof":
+                if (state.equals("request_received")) {
+                    //log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProof");
+                    sendProof(body);
+                }
+                else if (state.equals("presentation_acked")) {
                     counter.incrementAndGet();
                     ackTime = System.currentTimeMillis();
-                    long latency = ackTime - proposalTime;
+                    long latency = ackTime - proofRequestTime;
                     totalLatency = totalLatency + latency;
 
                     long elapsed = ackTime - startTime;
@@ -87,27 +100,10 @@ public class GlobalService {
                         delayedExit();
                     }
                     else {
-                        log.info("- elapsed time:" + elapsed/1000 + " is less than test time:" + testTime + "  -> sendCredentialProposal");
-                        proposalTime = System.currentTimeMillis();
-                        sendCredentialProposal(JsonPath.read(body, "$.connection_id"));
+                        log.info("- elapsed time:" + elapsed/1000 + " is less than test time:" + testTime + "  -> sendPrivacyPolicyAgreed");
+                        proofRequestTime = System.currentTimeMillis();
+                        sendPrivacyPolicyAgreed(JsonPath.read(body, "$.connection_id"));
                     }
-                }
-                break;
-            case "basicmessages":
-                String content = JsonPath.read(body, "$.content");
-                if (content.contains("PrivacyPolicyOffer")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyOffer) -> sendPrivacyPolicyAgreed");
-                    sendPrivacyPolicyAgreed(JsonPath.read(body, "$.connection_id"));
-                }
-                break;
-            case "present_proof":
-                if (state.equals("request_received")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProof");
-                    sendProof(body);
-                }
-                else if (state.equals("presentation_acked")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> deleteWalletAndExit");
-                    delayedExit();
                 }
                 break;
             case "problem_report":
@@ -205,7 +201,7 @@ public class GlobalService {
                 credId = JsonPath.read(element, "$.cred_info.referent");
             }
         }
-        log.info("Use latest credential in demo - credRevId: " + credRevId + ", credId: "+ credId);
+        //log.info("Use latest credential in demo - credRevId: " + credRevId + ", credId: "+ credId);
 
         // Make body using presentation_request
         LinkedHashMap<String, Object> reqAttrs = JsonPath.read(reqBody, "$.presentation_request.requested_attributes");
