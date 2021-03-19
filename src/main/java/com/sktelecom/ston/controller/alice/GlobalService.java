@@ -87,7 +87,7 @@ public class GlobalService {
                         delayedExit();
                     }
                     else {
-                        log.info("- counter is less than iterations -> sendCredentialProposal");
+                        log.info("- elapsed time:" + elapsed/1000 + " is less than test time:" + testTime + "  -> sendCredentialProposal");
                         proposalTime = System.currentTimeMillis();
                         sendCredentialProposal(JsonPath.read(body, "$.connection_id"));
                     }
@@ -238,14 +238,15 @@ public class GlobalService {
                 long elapsed = endTime - startTime;
                 long transNum = counter.get();
                 double elapsedSec = (double) elapsed / 1000L;
+                double totalLatencySec = totalLatency/1000L;
 
                 log.info("--------------------------");
-                log.info("Elapsed time (ms): " + elapsed);
+                log.info("Number of transactions : " + transNum);
+                log.info("Elapsed time (sec): " + elapsedSec);
                 log.info("TPS: " + transNum/elapsedSec);
                 log.info("--------------------------");
-                log.info("Total latency (ms): " + totalLatency);
-                log.info("Number of transactions : " + transNum);
-                log.info("Average latency (ms): " + totalLatency/transNum);
+                log.info("Total latency (sec): " + totalLatencySec);
+                log.info("Average latency (sec): " + totalLatencySec/transNum);
                 System.exit(0);
             }
         };
