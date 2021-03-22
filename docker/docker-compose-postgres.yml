@@ -28,7 +28,7 @@ services:
                  "--wallet-name", "base",
                  "--wallet-key", "base.key",
                  "--wallet-storage-type", "postgres_storage",
-                 "--wallet-storage-config", "{\"url\":\"postgres:5432\",\"wallet_scheme\":\"MultiWalletSingleTableSharedPool\"}",
+                 "--wallet-storage-config", "{\"url\":\"postgres:5432\",\"wallet_scheme\":\"MultiWalletSingleTable\"}",
                  "--wallet-storage-creds", "{\"account\":\"postgres\",\"password\":\"mysecretpassword\",\"admin_account\":\"postgres\",\"admin_password\":\"mysecretpassword\"}",
                  "--auto-accept-invites",
                  "--auto-accept-requests",
