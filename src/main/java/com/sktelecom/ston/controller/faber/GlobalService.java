@@ -42,7 +42,7 @@ public class GlobalService {
     String verkey; // verification key
     String schemaId; // schema identifier
     String credDefId; // credential definition identifier
-    String photoFileName = "images/alice.jpg";
+    String photoFileName = "images/ci_t.jpg"; // sample image file
 
     // check options
     static boolean enableRevoke = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_REVOKE", "false"));
