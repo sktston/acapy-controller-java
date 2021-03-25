@@ -3,7 +3,7 @@ version: '3'
 services:
   acapy-agent-mysql:
     build:
-      context: https://github.com/sktston/aries-cloudagent-python.git#feature/fetch_settings_from_db
+      context: https://github.com/sktston/aries-cloudagent-python.git#develop
       dockerfile: ./docker/Dockerfile.run-wait
     ports:
       - 8020-8021:8020-8021
