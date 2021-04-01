@@ -28,6 +28,9 @@ public class GlobalService {
     @Value("${controllerUrl}")
     private String controllerUrl; // FIXME: adjust url in application-alice.properties
 
+    @Value("${walletType}")
+    private String walletType;
+
     String version; // for randomness
     String walletName; // new walletName
     String walletId; // new wallet id
@@ -134,6 +137,7 @@ public class GlobalService {
         log.info("- wallet name: " + walletName);
         log.info("- webhook url: " + webhookUrl);
         log.info("- wallet ID: " + walletId);
+        log.info("- wallet type: " + walletType);
         log.info("- jwt token: " + jwtToken);
     }
 
@@ -141,7 +145,7 @@ public class GlobalService {
         String body = JsonPath.parse("{" +
                 "  wallet_name: '" + walletName + "'," +
                 "  wallet_key: '" + walletName + ".key'," +
-                "  wallet_type: 'indy'," +
+                "  wallet_type: '" + walletType + "'," +
                 "  label: '" + walletName + ".label'," +
                 "  image_url: '" + imageUrl + "'," +
                 "  wallet_webhook_urls: ['" + webhookUrl + "']" +
