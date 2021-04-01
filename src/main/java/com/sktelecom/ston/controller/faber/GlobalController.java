@@ -19,7 +19,8 @@ public class GlobalController {
 
     @GetMapping("/invitation")
     public String invitationHandler() {
-        return globalService.createInvitation();
+        String invitationUrl = globalService.createInvitationUrl();
+        return parseInvitationUrl(invitationUrl);
     }
 
     @GetMapping("/invitation-url")

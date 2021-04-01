@@ -52,14 +52,6 @@ public class GlobalService {
         provisionController();
     }
 
-    public String createInvitation() {
-        String params = "?public=true";
-        String response = client.requestPOST(randomStr(apiUrls) + "/connections/create-invitation" + params, jwtToken, "{}");
-        String invitation = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation")).jsonString();
-        log.info("createInvitation <<< invitation:" + invitation);
-        return invitation;
-    }
-
     public String createInvitationUrl() {
         String params = "?public=true";
         String response = client.requestPOST(randomStr(apiUrls) + "/connections/create-invitation" + params, jwtToken, "{}");

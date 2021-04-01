@@ -171,7 +171,12 @@ public class GlobalService {
         String credId = null;
         for (LinkedHashMap<String, Object> element : credentials) {
             if (JsonPath.read(element, "$.cred_info.cred_rev_id") != null){ // case of support revocation
-                int curCredRevId = Integer.parseInt(JsonPath.read(element, "$.cred_info.cred_rev_id"));
+                Object objCredRevId = JsonPath.read(element, "$.cred_info.cred_rev_id");
+                int curCredRevId;
+                if (objCredRevId instanceof String)
+                    curCredRevId = Integer.parseInt((String) objCredRevId);
+                else
+                    curCredRevId = (Integer) objCredRevId;
                 if (curCredRevId > credRevId) {
                     credRevId = curCredRevId;
                     credId = JsonPath.read(element, "$.cred_info.referent");
