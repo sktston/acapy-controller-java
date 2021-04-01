@@ -42,8 +42,7 @@ public class GlobalService {
     String verkey; // verification key
     String schemaId; // schema identifier
     String credDefId; // credential definition identifier
-    //String photoFileName = "images/alice.jpg";
-    String photoFileName = "images/test.pdf";
+    String photoFileName = "images/ci_t.jpg"; // sample image file
 
     // check options
     static boolean enableRevoke = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_REVOKE", "false"));
@@ -51,14 +50,6 @@ public class GlobalService {
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
         provisionController();
-    }
-
-    public String createInvitation() {
-        String params = "?public=true";
-        String response = client.requestPOST(randomStr(apiUrls) + "/connections/create-invitation" + params, jwtToken, "{}");
-        String invitation = JsonPath.parse((LinkedHashMap)JsonPath.read(response, "$.invitation")).jsonString();
-        log.info("createInvitation <<< invitation:" + invitation);
-        return invitation;
     }
 
     public String createInvitationUrl() {
