@@ -56,7 +56,7 @@ public class GlobalService {
     }
 
     public String createInvitationUrl() {
-        String params = "?public=true";
+        String params = "";
         String response = client.requestPOST(randomStr(apiUrls) + "/connections/create-invitation" + params, jwtToken, "{}");
         String invitationUrl = JsonPath.read(response, "$.invitation_url");
         log.info("createInvitationUrl <<< invitationUrl:" + invitationUrl);
