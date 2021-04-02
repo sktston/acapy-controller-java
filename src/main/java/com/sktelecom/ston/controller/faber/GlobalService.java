@@ -21,10 +21,10 @@ import static com.sktelecom.ston.controller.utils.Common.*;
 public class GlobalService {
     private final HttpClient client = new HttpClient();
 
-    // agent configurations
-    final String[] apiUrls = {"http://localhost:8021"};
-    //final String[] apiUrls = {"http://localhost:8021", "http://localhost:8031"}; // with docker-compose-multi.yml
     final String stewardSeed = "000000000000000000000000Steward1";
+
+    @Value("${apiUrlList}")
+    private String apiUrlList;
 
     // controller configurations
     @Value("${controllerUrl}")
@@ -33,6 +33,7 @@ public class GlobalService {
     @Value("${walletType}")
     private String walletType;
 
+    String[] apiUrls;
     String version; // for randomness
     String walletName; // new wallet name
     String walletId; // new wallet id
@@ -53,6 +54,7 @@ public class GlobalService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
+        apiUrls = apiUrlList.split(",");
         provisionController();
     }
 

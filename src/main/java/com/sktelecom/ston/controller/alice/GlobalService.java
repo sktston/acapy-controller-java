@@ -19,18 +19,18 @@ import static com.sktelecom.ston.controller.utils.Common.*;
 public class GlobalService {
     private final HttpClient client = new HttpClient();
 
-    // agent configurations
-    final String[] apiUrls = {"http://localhost:8021"};
-    //final String[] apiUrls = {"http://localhost:8021", "http://localhost:8031"}; // with docker-compose-multi.yml
     int iterations = 1; // for long-term test
 
-    // controller configurations
+    @Value("${apiUrlList}")
+    private String apiUrlList;
+
     @Value("${controllerUrl}")
     private String controllerUrl; // FIXME: adjust url in application-alice.properties
 
     @Value("${walletType}")
     private String walletType;
 
+    String[] apiUrls;
     String version; // for randomness
     String walletName; // new walletName
     String walletId; // new wallet id
@@ -51,6 +51,7 @@ public class GlobalService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
+        apiUrls = apiUrlList.split(",");
         beforeTime = System.currentTimeMillis();
         if (useMultitenancy)
             provisionController();
