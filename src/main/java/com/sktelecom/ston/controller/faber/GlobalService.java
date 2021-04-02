@@ -49,6 +49,7 @@ public class GlobalService {
 
     // check options
     static boolean enableRevoke = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_REVOKE", "false"));
+    static boolean useMultitenancy = Boolean.parseBoolean(System.getenv().getOrDefault("USE_MULTITENANCY", "true"));
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
@@ -111,32 +112,40 @@ public class GlobalService {
 
     public void provisionController() {
         version = getRandomInt(1, 100) + "." + getRandomInt(1, 100) + "." + getRandomInt(1, 100);
-        walletName = "faber." + version;
-        imageUrl = "https://identicon-api.herokuapp.com/" + walletName + "/300?format=png";
-        seed = UUID.randomUUID().toString().replaceAll("-", "");
-        webhookUrl = controllerUrl + "/webhooks";
 
-        log.info("Obtain jwtToken of steward");
-        stewardJwtToken = obtainStewardJwtToken();
+        if (useMultitenancy) {
+            walletName = "faber." + version;
+            imageUrl = "https://identicon-api.herokuapp.com/" + walletName + "/300?format=png";
+            seed = UUID.randomUUID().toString().replaceAll("-", "");
+            webhookUrl = controllerUrl + "/webhooks";
 
-        log.info("Create wallet and did");
-        createWalletAndDid();
-        log.info("Register did as issuer");
-        registerDidAsIssuer();
+            log.info("Obtain jwtToken of steward");
+            stewardJwtToken = obtainStewardJwtToken();
+
+            log.info("Create wallet and did");
+            createWalletAndDid();
+            log.info("Register did as issuer");
+            registerDidAsIssuer();
+        }
+        else {
+            updateEndpoint();
+        }
 
         log.info("Create schema and credential definition");
         createSchema();
         createCredentialDefinition();
 
         log.info("Configuration of faber:");
-        log.info("- wallet name: " + walletName);
-        log.info("- seed: " + seed);
+        if (useMultitenancy) {
+            log.info("- wallet name: " + walletName);
+            log.info("- seed: " + seed);
+            log.info("- webhook url: " + webhookUrl);
+            log.info("- wallet ID: " + walletId);
+            log.info("- wallet type: " + walletType);
+            log.info("- jwt token: " + jwtToken);
+        }
         log.info("- did: " + did);
         log.info("- verification key: " + verkey);
-        log.info("- webhook url: " + webhookUrl);
-        log.info("- wallet ID: " + walletId);
-        log.info("- wallet type: " + walletType);
-        log.info("- jwt token: " + jwtToken);
         log.info("- schema ID: " + schemaId);
         log.info("- credential definition ID: " + credDefId);
 
@@ -226,6 +235,27 @@ public class GlobalService {
         params = "?did=" + did;
         log.info("Assign the did to public: " + did);
         response = client.requestPOST(randomStr(apiUrls) + "/wallet/did/public" + params, jwtToken, "{}");
+        log.info("response: " + response);
+    }
+
+    public void updateEndpoint() {
+        String response = client.requestGET(randomStr(apiUrls) + "/wallet/did/public", jwtToken);
+        log.info("response: " + response);
+        did = JsonPath.read(response, "$.result.did");
+        verkey = JsonPath.read(response, "$.result.verkey");
+
+        String params = "?did=" + did;
+        response = client.requestGET(randomStr(apiUrls) + "/wallet/get-did-endpoint" + params, jwtToken);
+        log.info("response: " + response);
+        String endpoint =  JsonPath.read(response, "$.endpoint");
+
+        String body = JsonPath.parse("{" +
+                "  did: '" + did + "'," +
+                "  endpoint: '" + endpoint + "'," +
+                "  endpoint_type: 'Endpoint'," +
+                "}").jsonString();
+        log.info("Update endpoint: " + body);
+        response = client.requestPOST(randomStr(apiUrls) + "/wallet/set-did-endpoint", jwtToken, body);
         log.info("response: " + response);
     }
 

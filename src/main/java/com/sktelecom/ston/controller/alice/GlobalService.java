@@ -46,10 +46,14 @@ public class GlobalService {
     long beforeTime;
     long afterTime;
 
+    // check options
+    static boolean useMultitenancy = Boolean.parseBoolean(System.getenv().getOrDefault("USE_MULTITENANCY", "true"));
+
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
         beforeTime = System.currentTimeMillis();
-        provisionController();
+        if (useMultitenancy)
+            provisionController();
 
         log.info("Receive invitation from faber controller");
         receiveInvitation();
@@ -85,8 +89,14 @@ public class GlobalService {
                     sendProof(body);
                 }
                 else if (state.equals("presentation_acked")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> deleteWalletAndExit");
-                    deleteWalletAndExit();
+                    if (useMultitenancy) {
+                        log.info("- Case (topic:" + topic + ", state:" + state + ") -> deleteWalletAndExit");
+                        deleteWalletAndExit();
+                    }
+                    else {
+                        log.info("- Case (topic:" + topic + ", state:" + state + ") -> delayedExit");
+                        delayedExit();
+                    }
                 }
                 break;
             case "problem_report":
@@ -102,11 +112,12 @@ public class GlobalService {
     }
 
     public void provisionController() {
-        log.info("Create wallet");
         version = getRandomInt(1, 100) + "." + getRandomInt(1, 100) + "." + getRandomInt(1, 100);
         walletName = "alice." + version;
         imageUrl = "https://identicon-api.herokuapp.com/" + walletName + "/300?format=png";
         webhookUrl = controllerUrl + "/webhooks";
+
+        log.info("Create wallet");
         createWallet();
 
         log.info("Configuration of alice:");
@@ -230,6 +241,27 @@ public class GlobalService {
                     log.info("Remaining iterations : " + iterations);
                     provisionController();
 
+                    log.info("Receive invitation from faber controller");
+                    receiveInvitation();
+                }
+            }
+        };
+        Timer timer = new Timer("Timer");
+        timer.schedule(task, 100L);
+    }
+
+    public void delayedExit() {
+        TimerTask task = new TimerTask() {
+            public void run() {
+                if (--iterations == 0) {
+                    log.info("Alice demo completes - Exit");
+                    afterTime = System.currentTimeMillis();
+                    long secDiffTime = afterTime - beforeTime;
+                    log.info("Elapsed time (ms) : " + secDiffTime);
+                    System.exit(0);
+                }
+                else {
+                    log.info("Remaining iterations : " + iterations);
                     log.info("Receive invitation from faber controller");
                     receiveInvitation();
                 }
