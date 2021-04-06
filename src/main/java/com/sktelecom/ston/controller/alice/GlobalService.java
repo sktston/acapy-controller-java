@@ -1,6 +1,7 @@
 package com.sktelecom.ston.controller.alice;
 
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.PathNotFoundException;
 import com.sktelecom.ston.controller.utils.HttpClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,9 @@ public class GlobalService {
 
     @Value("${walletType}")
     private String walletType;
+
+    @Value("${protocolVersion}")
+    private String protocolVersion;
 
     String[] apiUrls;
     String version; // for randomness
@@ -61,20 +65,35 @@ public class GlobalService {
     }
 
     public void handleEvent(String topic, String body) {
-        String state = topic.equals("problem_report") ? "" : JsonPath.read(body, "$.state");
+        String state = null;
+        try {
+            state = JsonPath.read(body, "$.state");
+        } catch (PathNotFoundException e) {}
         log.info("handleEvent >>> topic:" + topic + ", state:" + state + ", body:" + body);
 
         switch(topic) {
             case "connections":
                 if (state.equals("active")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialProposal");
-                    sendCredentialProposal(JsonPath.read(body, "$.connection_id"));
+                    if (protocolVersion.equals("2.0")) {
+                        log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialProposalV2");
+                        sendCredentialProposalV2(JsonPath.read(body, "$.connection_id"));
+                    }
+                    else {
+                        log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialProposal");
+                        sendCredentialProposal(JsonPath.read(body, "$.connection_id"));
+                    }
                 }
                 break;
             case "issue_credential":
                 if (state.equals("offer_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequest");
                     sendCredentialRequest(JsonPath.read(body, "$.credential_exchange_id"));
+                }
+                break;
+            case "issue_credential_v2_0":
+                if (state.equals("offer-received")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequestV2");
+                    sendCredentialRequestV2(JsonPath.read(body, "$.cred_ex_id"));
                 }
                 break;
             case "basicmessages":
@@ -122,6 +141,7 @@ public class GlobalService {
         createWallet();
 
         log.info("Configuration of alice:");
+        log.info("- protocol version: " + protocolVersion);
         log.info("- wallet name: " + walletName);
         log.info("- webhook url: " + webhookUrl);
         log.info("- wallet ID: " + walletId);
@@ -158,13 +178,22 @@ public class GlobalService {
     }
 
     public void sendCredentialProposal(String connectionId) {
-
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId  + "'," +
                 // uncomment below if you want to request specific credential definition id to faber
                 //"  cred_def_id: 'TCXu9qcEoRYX9jWT6CBFAy:3:CL:1614837027:tag'," +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/send-proposal", jwtToken, body);
+    }
+
+    public void sendCredentialProposalV2(String connectionId) {
+        String body = JsonPath.parse("{" +
+                "  connection_id: '" + connectionId  + "'," +
+                "  filter: { indy: {} }," +
+                // uncomment below if you want to request specific credential definition id to faber
+                //"  filter: { indy: { cred_def_id: 'TCXu9qcEoRYX9jWT6CBFAy:3:CL:1614837027:tag' } }," +
+                "}").jsonString();
+        String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential-2.0/send-proposal", jwtToken, body);
     }
 
     public void sendPrivacyPolicyAgreed(String connectionId) {
@@ -176,6 +205,10 @@ public class GlobalService {
 
     public void sendCredentialRequest(String credExId) {
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/records/" + credExId + "/send-request", jwtToken, "{}");
+    }
+
+    public void sendCredentialRequestV2(String credExId) {
+        String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential-2.0/records/" + credExId + "/send-request", jwtToken, "{}");
     }
 
     public void sendProof(String reqBody) {

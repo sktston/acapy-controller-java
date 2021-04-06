@@ -1,9 +1,11 @@
 package com.sktelecom.ston.controller.faber;
 
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.PathNotFoundException;
 import com.sktelecom.ston.controller.utils.HttpClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.codec.binary.Base64;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -67,7 +69,10 @@ public class GlobalService {
     }
 
     public void handleEvent(String topic, String body) {
-        String state = topic.equals("problem_report") ? "" : JsonPath.read(body, "$.state");
+        String state = null;
+        try {
+            state = JsonPath.read(body, "$.state");
+        } catch (PathNotFoundException e) {}
         log.info("handleEvent >>> topic:" + topic + ", state:" + state + ", body:" + body);
 
         switch(topic) {
@@ -78,6 +83,20 @@ public class GlobalService {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
                     String credentialProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.credential_proposal_dict")).jsonString();
                     sendCredentialOffer(JsonPath.read(body, "$.connection_id"), credentialProposal);
+                }
+                else if (state.equals("credential_acked")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPrivacyPolicyOffer");
+                    if (enableRevoke) {
+                        revokeCredential(JsonPath.read(body, "$.revoc_reg_id"), JsonPath.read(body, "$.revocation_id"));
+                    }
+                    sendPrivacyPolicyOffer(JsonPath.read(body, "$.connection_id"));
+                }
+                break;
+            case "issue_credential_v2_0":
+                if (state.equals("proposal-received")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOfferV2");
+                    String credentialProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.cred_proposal")).jsonString();
+                    sendCredentialOfferV2(JsonPath.read(body, "$.connection_id"), credentialProposal);
                 }
                 else if (state.equals("credential_acked")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPrivacyPolicyOffer");
@@ -308,6 +327,38 @@ public class GlobalService {
                 "  }" +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/send", jwtToken, body);
+    }
+
+    public void sendCredentialOfferV2(String connectionId, String credentialProposal) {
+        // uncomment below if you want to get requested credential definition id from alice
+        //String attach = JsonPath.read(credentialProposal, "$.filters~attach.[0].data.base64");
+        //String attachJson = new String(Base64.decodeBase64(attach));
+        //String requestedCredDefId = JsonPath.read(attachJson, "$.cred_def_id");
+
+        String encodedImage = "";
+        try {
+            encodedImage = encodeFileToBase64Binary(photoFileName);
+        } catch (Exception e) { e.printStackTrace(); }
+        String body = JsonPath.parse("{" +
+                "  connection_id: '" + connectionId + "'," +
+                "  comment: 'credential_comment'," +
+                "  credential_preview: {" +
+                "    @type: 'https://didcomm.org/issue-credential/2.0/credential-preview'," +
+                "    attributes: [" +
+                "      { name: 'name', value: 'alice' }," +
+                "      { name: 'date', value: '05-2018' }," +
+                "      { name: 'degree', value: 'maths' }," +
+                "      { name: 'age', value: '25' }," +
+                "      { name: 'photo', value: '" + encodedImage + "', mime-type: 'image/jpeg' }" +
+                "    ]" +
+                "  }," +
+                "  filter: {" +
+                "    indy: {" +
+                "      cred_def_id: '" + credDefId + "'," +
+                "    }" +
+                "  }" +
+                "}").jsonString();
+        String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential-2.0/send", jwtToken, body);
     }
 
     public void sendPrivacyPolicyOffer(String connectionId) {
