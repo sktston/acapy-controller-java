@@ -65,6 +65,7 @@ public class GlobalService {
         if (useMultitenancy)
             provisionController();
 
+        log.info("- protocol version: " + protocolVersion);
         log.info("Receive invitation from faber controller");
         receiveInvitation();
     }
@@ -104,7 +105,8 @@ public class GlobalService {
             case "present_proof":
                 if (state.equals("request_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProof");
-                    sendProof(body);
+                    String presentationRequest = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.presentation_request")).jsonString();
+                    sendProof(JsonPath.read(body, "$.presentation_exchange_id"), presentationRequest);
                 }
                 else if (state.equals("presentation_acked")) {
                     if (useMultitenancy) {
@@ -168,7 +170,6 @@ public class GlobalService {
         createWallet();
 
         log.info("Configuration of alice:");
-        log.info("- protocol version: " + protocolVersion);
         log.info("- wallet name: " + walletName);
         log.info("- webhook url: " + webhookUrl);
         log.info("- wallet ID: " + walletId);
@@ -245,8 +246,7 @@ public class GlobalService {
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential-2.0/records/" + credExId + "/send-request", jwtToken, "{}");
     }
 
-    public void sendProof(String reqBody) {
-        String presExId = JsonPath.read(reqBody, "$.presentation_exchange_id");
+    public void sendProof(String presExId, String presentationRequest) {
         String response = client.requestGET(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/credentials", jwtToken);
         log.info("Matching Credentials in my wallet: " + response);
 
@@ -255,12 +255,14 @@ public class GlobalService {
         String credId = null;
         for (LinkedHashMap<String, Object> element : credentials) {
             if (JsonPath.read(element, "$.cred_info.cred_rev_id") != null){ // case of support revocation
+                // for adjusting the type of cred_rev_id (libindy: String and askar: int)
                 Object objCredRevId = JsonPath.read(element, "$.cred_info.cred_rev_id");
                 int curCredRevId;
                 if (objCredRevId instanceof String)
                     curCredRevId = Integer.parseInt((String) objCredRevId);
                 else
                     curCredRevId = (Integer) objCredRevId;
+
                 if (curCredRevId > credRevId) {
                     credRevId = curCredRevId;
                     credId = JsonPath.read(element, "$.cred_info.referent");
@@ -270,14 +272,14 @@ public class GlobalService {
                 credId = JsonPath.read(element, "$.cred_info.referent");
             }
         }
-        log.info("Use latest credential in demo - credRevId: " + credRevId + ", credId: "+ credId);
+        log.info("Use latest credential in demo - credId: "+ credId);
 
         // Make body using presentation_request
-        LinkedHashMap<String, Object> reqAttrs = JsonPath.read(reqBody, "$.presentation_request.requested_attributes");
+        LinkedHashMap<String, Object> reqAttrs = JsonPath.read(presentationRequest, "$.requested_attributes");
         for(String key : reqAttrs.keySet())
             reqAttrs.replace(key, JsonPath.parse("{ cred_id: '" + credId + "', revealed: true }").json());
 
-        LinkedHashMap<String, Object> reqPreds = JsonPath.read(reqBody, "$.presentation_request.requested_predicates");
+        LinkedHashMap<String, Object> reqPreds = JsonPath.read(presentationRequest, "$.requested_predicates");
         for(String key : reqPreds.keySet())
             reqPreds.replace(key, JsonPath.parse("{ cred_id: '" + credId + "' }").json());
 
@@ -299,12 +301,14 @@ public class GlobalService {
         String credId = null;
         for (LinkedHashMap<String, Object> element : credentials) {
             if (JsonPath.read(element, "$.cred_info.cred_rev_id") != null){ // case of support revocation
+                // for adjusting the type of cred_rev_id (libindy: String and askar: int)
                 Object objCredRevId = JsonPath.read(element, "$.cred_info.cred_rev_id");
                 int curCredRevId;
                 if (objCredRevId instanceof String)
                     curCredRevId = Integer.parseInt((String) objCredRevId);
                 else
                     curCredRevId = (Integer) objCredRevId;
+
                 if (curCredRevId > credRevId) {
                     credRevId = curCredRevId;
                     credId = JsonPath.read(element, "$.cred_info.referent");
@@ -314,7 +318,7 @@ public class GlobalService {
                 credId = JsonPath.read(element, "$.cred_info.referent");
             }
         }
-        log.info("Use latest credential in demo - credRevId: " + credRevId + ", credId: "+ credId);
+        log.info("Use latest credential in demo - credId: "+ credId);
 
         String encodedData = JsonPath.read(presRequest, "$.request_presentations~attach.[0].data.base64");
         String requestPresentation = new String(Base64.decodeBase64(encodedData));

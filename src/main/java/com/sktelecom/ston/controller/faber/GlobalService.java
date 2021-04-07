@@ -87,7 +87,7 @@ public class GlobalService {
                 else if (state.equals("credential_acked")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPrivacyPolicyOffer");
                     if (enableRevoke) {
-                        revokeCredential(JsonPath.read(body, "$.cred_ex_id"));
+                        revokeCredential(JsonPath.read(body, "$.credential_exchange_id"));
                     }
                     sendPrivacyPolicyOffer(JsonPath.read(body, "$.connection_id"));
                 }
@@ -95,8 +95,8 @@ public class GlobalService {
             case "issue_credential_v2_0":
                 if (state.equals("proposal-received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOfferV2");
-                    String credentialProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.cred_proposal")).jsonString();
-                    sendCredentialOfferV2(JsonPath.read(body, "$.connection_id"), credentialProposal);
+                    String credProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.cred_proposal")).jsonString();
+                    sendCredentialOfferV2(JsonPath.read(body, "$.connection_id"), credProposal);
                 }
                 else if (state.equals("done")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPrivacyPolicyOfferV2");
@@ -109,7 +109,8 @@ public class GlobalService {
             case "present_proof":
                 if (state.equals("verified")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> printProofResult");
-                    printProofResult(body);
+                    String presentation = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.presentation")).jsonString();
+                    printProofResult(JsonPath.read(body, "$.verified"), presentation);
                 }
                 break;
             case "present_proof_v2_0":
@@ -341,16 +342,16 @@ public class GlobalService {
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/send", jwtToken, body);
     }
 
-    public void sendCredentialOfferV2(String connectionId, String credentialProposal) {
+    public void sendCredentialOfferV2(String connectionId, String credProposal) {
         // uncomment below if you want to get requested credential definition id from alice
-        //String encodedData = JsonPath.read(credentialProposal, "$.filters~attach.[0].data.base64");
+        //String encodedData = JsonPath.read(credProposal, "$.filters~attach.[0].data.base64");
         //String filter = new String(Base64.decodeBase64(encodedData));
         //String requestedCredDefId = JsonPath.read(filter, "$.cred_def_id");
 
         String encodedImage = "";
-        //try {
-        //    encodedImage = encodeFileToBase64Binary(photoFileName);
-        //} catch (Exception e) { e.printStackTrace(); }
+        try {
+            encodedImage = encodeFileToBase64Binary(photoFileName);
+        } catch (Exception e) { e.printStackTrace(); }
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId + "'," +
                 "  comment: 'credential_comment'," +
@@ -477,10 +478,9 @@ public class GlobalService {
         String response = client.requestPOST(randomStr(apiUrls) + "/present-proof-2.0/send-request", jwtToken, body);
     }
 
-    public void printProofResult(String body) {
-        String requestedProof = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.presentation.requested_proof")).jsonString();
+    public void printProofResult(String verified, String presentation) {
+        String requestedProof = JsonPath.parse((LinkedHashMap)JsonPath.read(presentation, "$.requested_proof")).jsonString();
         log.info("  - Proof requested:" + prettyJson(requestedProof));
-        String verified = JsonPath.read(body, "$.verified");
         log.info("  - Proof validation: " + verified);
     }
 
