@@ -54,6 +54,14 @@ task faber_single(type:JavaExec) {
     args(['--spring.config.location=classpath:/application-faber.properties'])
     environment("USE_MULTITENANCY", "false")
 }
+task faber_single_revoke(type:JavaExec) {
+    group 'application'
+    classpath sourceSets.main.runtimeClasspath
+    main = 'com.sktelecom.ston.controller.faber.Application'
+    args(['--spring.config.location=classpath:/application-faber.properties'])
+    environment("USE_MULTITENANCY", "false")
+    environment("ENABLE_REVOKE", "true")
+}
 task alice(type:JavaExec) {
     group 'application'
     classpath sourceSets.main.runtimeClasspath

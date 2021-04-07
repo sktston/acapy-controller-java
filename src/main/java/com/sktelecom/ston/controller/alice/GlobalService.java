@@ -10,7 +10,12 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import org.apache.commons.codec.binary.Base64;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import static com.sktelecom.ston.controller.utils.Common.*;
 
@@ -96,13 +101,6 @@ public class GlobalService {
                     sendCredentialRequestV2(JsonPath.read(body, "$.cred_ex_id"));
                 }
                 break;
-            case "basicmessages":
-                String content = JsonPath.read(body, "$.content");
-                if (content.contains("PrivacyPolicyOffer")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyOffer) -> sendPrivacyPolicyAgreed");
-                    sendPrivacyPolicyAgreed(JsonPath.read(body, "$.connection_id"));
-                }
-                break;
             case "present_proof":
                 if (state.equals("request_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProof");
@@ -119,12 +117,41 @@ public class GlobalService {
                     }
                 }
                 break;
+            case "present_proof_v2_0":
+                if (state.equals("request-received")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProofV2");
+                    String presRequest = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.pres_request")).jsonString();
+                    sendProofV2(JsonPath.read(body, "$.pres_ex_id"), presRequest);
+                }
+                else if (state.equals("done")) {
+                    if (useMultitenancy) {
+                        log.info("- Case (topic:" + topic + ", state:" + state + ") -> deleteWalletAndExit");
+                        deleteWalletAndExit();
+                    }
+                    else {
+                        log.info("- Case (topic:" + topic + ", state:" + state + ") -> delayedExit");
+                        delayedExit();
+                    }
+                }
+                break;
+            case "basicmessages":
+                String content = JsonPath.read(body, "$.content");
+                if (content.contains("PrivacyPolicyOfferV2")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyOffer) -> sendPrivacyPolicyAgreedV2");
+                    sendPrivacyPolicyAgreedV2(JsonPath.read(body, "$.connection_id"));
+                }
+                else if (content.contains("PrivacyPolicyOffer")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyOffer) -> sendPrivacyPolicyAgreed");
+                    sendPrivacyPolicyAgreed(JsonPath.read(body, "$.connection_id"));
+                }
+                break;
             case "problem_report":
                 log.warn("- Case (topic:" + topic + ") -> Print body");
                 log.warn("  - body:" + prettyJson(body));
                 break;
             case "revocation_registry":
             case "issuer_cred_rev":
+            case "issue_credential_v2_0_indy":
                 break;
             default:
                 log.warn("- Warning Unexpected topic:" + topic);
@@ -203,6 +230,13 @@ public class GlobalService {
         String response = client.requestPOST(randomStr(apiUrls) + "/connections/" + connectionId + "/send-message", jwtToken, body);
     }
 
+    public void sendPrivacyPolicyAgreedV2(String connectionId) {
+        String body = JsonPath.parse("{" +
+                "  content: 'PrivacyPolicyAgreedV2'," +
+                "}").jsonString();
+        String response = client.requestPOST(randomStr(apiUrls) + "/connections/" + connectionId + "/send-message", jwtToken, body);
+    }
+
     public void sendCredentialRequest(String credExId) {
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/records/" + credExId + "/send-request", jwtToken, "{}");
     }
@@ -214,6 +248,7 @@ public class GlobalService {
     public void sendProof(String reqBody) {
         String presExId = JsonPath.read(reqBody, "$.presentation_exchange_id");
         String response = client.requestGET(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/credentials", jwtToken);
+        log.info("Matching Credentials in my wallet: " + response);
 
         ArrayList<LinkedHashMap<String, Object>> credentials = JsonPath.read(response, "$");
         int credRevId = 0;
@@ -253,6 +288,56 @@ public class GlobalService {
                 .put("$", "self_attested_attributes", selfAttrs).jsonString();
 
         response = client.requestPOST(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/send-presentation", jwtToken, body);
+    }
+
+    public void sendProofV2(String presExId, String presRequest) {
+        String response = client.requestGET(randomStr(apiUrls) + "/present-proof-2.0/records/" + presExId + "/credentials", jwtToken);
+        log.info("Matching Credentials in my wallet: " + response);
+
+        ArrayList<LinkedHashMap<String, Object>> credentials = JsonPath.read(response, "$");
+        int credRevId = 0;
+        String credId = null;
+        for (LinkedHashMap<String, Object> element : credentials) {
+            if (JsonPath.read(element, "$.cred_info.cred_rev_id") != null){ // case of support revocation
+                Object objCredRevId = JsonPath.read(element, "$.cred_info.cred_rev_id");
+                int curCredRevId;
+                if (objCredRevId instanceof String)
+                    curCredRevId = Integer.parseInt((String) objCredRevId);
+                else
+                    curCredRevId = (Integer) objCredRevId;
+                if (curCredRevId > credRevId) {
+                    credRevId = curCredRevId;
+                    credId = JsonPath.read(element, "$.cred_info.referent");
+                }
+            }
+            else { // case of not support revocation
+                credId = JsonPath.read(element, "$.cred_info.referent");
+            }
+        }
+        log.info("Use latest credential in demo - credRevId: " + credRevId + ", credId: "+ credId);
+
+        String encodedData = JsonPath.read(presRequest, "$.request_presentations~attach.[0].data.base64");
+        String requestPresentation = new String(Base64.decodeBase64(encodedData));
+
+        // Make body using requestPresentation
+        LinkedHashMap<String, Object> reqAttrs = JsonPath.read(requestPresentation, "$.requested_attributes");
+        for(String key : reqAttrs.keySet())
+            reqAttrs.replace(key, JsonPath.parse("{ cred_id: '" + credId + "', revealed: true }").json());
+
+        LinkedHashMap<String, Object> reqPreds = JsonPath.read(requestPresentation, "$.requested_predicates");
+        for(String key : reqPreds.keySet())
+            reqPreds.replace(key, JsonPath.parse("{ cred_id: '" + credId + "' }").json());
+
+        LinkedHashMap<String, Object> selfAttrs = new LinkedHashMap<>();
+
+        String presentation = JsonPath.parse("{}").put("$", "requested_attributes", reqAttrs)
+                .put("$", "requested_predicates", reqPreds)
+                .put("$", "self_attested_attributes", selfAttrs).jsonString();
+        String body =  JsonPath.parse("{" +
+                "  indy: " + presentation +
+                "}").jsonString();
+
+        response = client.requestPOST(randomStr(apiUrls) + "/present-proof-2.0/records/" + presExId + "/send-presentation", jwtToken, body);
     }
 
     public void deleteWallet() {
