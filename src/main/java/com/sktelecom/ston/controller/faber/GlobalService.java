@@ -106,6 +106,17 @@ public class GlobalService {
                     sendPrivacyPolicyOfferV2(JsonPath.read(body, "$.connection_id"));
                 }
                 break;
+            case "basicmessages":
+                String content = JsonPath.read(body, "$.content");
+                if (content.contains("PrivacyPolicyAgreedV2")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyAgreed) -> sendProofRequestV2");
+                    sendProofRequestV2(JsonPath.read(body, "$.connection_id"));
+                }
+                else if (content.contains("PrivacyPolicyAgreed")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyAgreed) -> sendProofRequest");
+                    sendProofRequest(JsonPath.read(body, "$.connection_id"));
+                }
+                break;
             case "present_proof":
                 if (state.equals("verified")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> printProofResult");
@@ -118,17 +129,6 @@ public class GlobalService {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> printProofResultV2");
                     String pres = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.pres")).jsonString();
                     printProofResultV2(JsonPath.read(body, "$.verified"), pres);
-                }
-                break;
-            case "basicmessages":
-                String content = JsonPath.read(body, "$.content");
-                if (content.contains("PrivacyPolicyAgreedV2")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyAgreed) -> sendProofRequestV2");
-                    sendProofRequestV2(JsonPath.read(body, "$.connection_id"));
-                }
-                else if (content.contains("PrivacyPolicyAgreed")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyAgreed) -> sendProofRequest");
-                    sendProofRequest(JsonPath.read(body, "$.connection_id"));
                 }
                 break;
             case "problem_report":

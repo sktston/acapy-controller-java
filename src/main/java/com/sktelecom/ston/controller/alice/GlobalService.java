@@ -102,6 +102,17 @@ public class GlobalService {
                     sendCredentialRequestV2(JsonPath.read(body, "$.cred_ex_id"));
                 }
                 break;
+            case "basicmessages":
+                String content = JsonPath.read(body, "$.content");
+                if (content.contains("PrivacyPolicyOfferV2")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyOffer) -> sendPrivacyPolicyAgreedV2");
+                    sendPrivacyPolicyAgreedV2(JsonPath.read(body, "$.connection_id"));
+                }
+                else if (content.contains("PrivacyPolicyOffer")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyOffer) -> sendPrivacyPolicyAgreed");
+                    sendPrivacyPolicyAgreed(JsonPath.read(body, "$.connection_id"));
+                }
+                break;
             case "present_proof":
                 if (state.equals("request_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProof");
@@ -134,17 +145,6 @@ public class GlobalService {
                         log.info("- Case (topic:" + topic + ", state:" + state + ") -> delayedExit");
                         delayedExit();
                     }
-                }
-                break;
-            case "basicmessages":
-                String content = JsonPath.read(body, "$.content");
-                if (content.contains("PrivacyPolicyOfferV2")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyOffer) -> sendPrivacyPolicyAgreedV2");
-                    sendPrivacyPolicyAgreedV2(JsonPath.read(body, "$.connection_id"));
-                }
-                else if (content.contains("PrivacyPolicyOffer")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyOffer) -> sendPrivacyPolicyAgreed");
-                    sendPrivacyPolicyAgreed(JsonPath.read(body, "$.connection_id"));
                 }
                 break;
             case "problem_report":
@@ -274,7 +274,7 @@ public class GlobalService {
         }
         log.info("Use latest credential in demo - credId: "+ credId);
 
-        // Make body using presentation_request
+        // Make body using presentationRequest
         LinkedHashMap<String, Object> reqAttrs = JsonPath.read(presentationRequest, "$.requested_attributes");
         for(String key : reqAttrs.keySet())
             reqAttrs.replace(key, JsonPath.parse("{ cred_id: '" + credId + "', revealed: true }").json());
