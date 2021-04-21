@@ -327,9 +327,7 @@ public class GlobalService {
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId + "'," +
                 "  cred_def_id: '" + credDefId + "'," +
-                "  comment: 'credential_comment'," +
                 "  credential_proposal: {" +
-                "    @type: 'https://didcomm.org/issue-credential/1.0/credential-preview'," +
                 "    attributes: [" +
                 "      { name: 'name', value: 'alice' }," +
                 "      { name: 'date', value: '05-2018' }," +
@@ -354,9 +352,7 @@ public class GlobalService {
         } catch (Exception e) { e.printStackTrace(); }
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId + "'," +
-                "  comment: 'credential_comment'," +
                 "  credential_preview: {" +
-                "    @type: 'https://didcomm.org/issue-credential/2.0/credential-preview'," +
                 "    attributes: [" +
                 "      { name: 'name', value: 'alice' }," +
                 "      { name: 'date', value: '05-2018' }," +
@@ -392,7 +388,6 @@ public class GlobalService {
         long curUnixTime = System.currentTimeMillis() / 1000L;
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId + "'," +
-                "  comment: 'proof_comment'," +
                 "  proof_request: {" +
                 "    name: 'proof_name'," +
                 "    version: '1.0'," +
@@ -436,7 +431,6 @@ public class GlobalService {
         long curUnixTime = System.currentTimeMillis() / 1000L;
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId + "'," +
-                "  comment: 'proof_comment'," +
                 "  presentation_request: {" +
                 "    indy: {" +
                 "      name: 'proof_name'," +
