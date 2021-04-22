@@ -120,15 +120,17 @@ public class GlobalService {
             case "present_proof":
                 if (state.equals("verified")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> printProofResult");
+                    String presRequest = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.presentation_request")).jsonString();
                     String presentation = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.presentation")).jsonString();
-                    printProofResult(JsonPath.read(body, "$.verified"), presentation);
+                    printProofResult(JsonPath.read(body, "$.verified"), presRequest, presentation);
                 }
                 break;
             case "present_proof_v2_0":
                 if (state.equals("done")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> printProofResultV2");
+                    String presReq = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.pres_request")).jsonString();
                     String pres = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.pres")).jsonString();
-                    printProofResultV2(JsonPath.read(body, "$.verified"), pres);
+                    printProofResultV2(JsonPath.read(body, "$.verified"), presReq, pres);
                 }
                 break;
             case "problem_report":
@@ -472,18 +474,46 @@ public class GlobalService {
         String response = client.requestPOST(randomStr(apiUrls) + "/present-proof-2.0/send-request", jwtToken, body);
     }
 
-    public void printProofResult(String verified, String presentation) {
-        String requestedProof = JsonPath.parse((LinkedHashMap)JsonPath.read(presentation, "$.requested_proof")).jsonString();
-        log.info("  - Proof requested:" + prettyJson(requestedProof));
-        log.info("  - Proof validation: " + verified);
+    public void printProofResult(String verified, String presRequest, String presentation) {
+        if (!verified.equals("true")) {
+            log.info("proof is not verified");
+            return;
+        }
+
+        LinkedHashMap<String, Object> requestedAttrs = JsonPath.read(presRequest, "$.requested_attributes");
+        LinkedHashMap<String, Object> revealedAttrs = JsonPath.read(presentation, "$.requested_proof.revealed_attrs");
+        LinkedHashMap<String, String> attrs = new LinkedHashMap<>();
+        for(String key : requestedAttrs.keySet()) {
+            String name = JsonPath.read(requestedAttrs.get(key), "$.name");
+            String value = "unrevealed";
+            if (revealedAttrs.containsKey(key))
+                value = JsonPath.read(revealedAttrs.get(key), "$.raw");
+            attrs.put(name, value);
+        }
+
+        LinkedHashMap<String, Object> requestedPreds = JsonPath.read(presRequest, "$.requested_predicates");
+        LinkedHashMap<String, String> preds = new LinkedHashMap<>();
+        for(String key : requestedPreds.keySet()) {
+            String name = JsonPath.read(requestedPreds.get(key), "$.name");
+            String type = JsonPath.read(requestedPreds.get(key), "$.p_type");
+            int value = JsonPath.read(requestedPreds.get(key), "$.p_value");
+            preds.put(name, type + " " + value);
+        }
+
+        log.info("Proof is verified");
+        for(String key : attrs.keySet())
+            log.info("Requested Attribute - " + key + ": " + attrs.get(key));
+        for(String key : preds.keySet())
+            log.info("Requested Predicate - " + key + " " + preds.get(key));
     }
 
-    public void printProofResultV2(String verified, String pres) {
-        String encodedData = JsonPath.read(pres, "$.presentations~attach.[0].data.base64");
+    public void printProofResultV2(String verified, String presReq, String pres) {
+        String encodedData = JsonPath.read(presReq, "$.request_presentations~attach.[0].data.base64");
+        String presRequest = new String(Base64.decodeBase64(encodedData));
+        encodedData = JsonPath.read(pres, "$.presentations~attach.[0].data.base64");
         String presentation = new String(Base64.decodeBase64(encodedData));
-        String requestedProof = JsonPath.parse((LinkedHashMap)JsonPath.read(presentation, "$.requested_proof")).jsonString();
-        log.info("  - Proof requested:" + prettyJson(requestedProof));
-        log.info("  - Proof validation: " + verified);
+
+        printProofResult(verified, presRequest, presentation);
     }
 
     public void revokeCredential(String credExId) {
