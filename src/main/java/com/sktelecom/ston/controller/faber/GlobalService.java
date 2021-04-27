@@ -348,10 +348,11 @@ public class GlobalService {
         //String filter = new String(Base64.decodeBase64(encodedData));
         //String requestedCredDefId = JsonPath.read(filter, "$.cred_def_id");
 
-        String encodedImage = "";
-        try {
-            encodedImage = encodeFileToBase64Binary(photoFileName);
-        } catch (Exception e) { e.printStackTrace(); }
+        String encodedImage = "base64EncodedJpegImage";
+        // uncomment below if you want to use actual encoded jpeg image
+        //try {
+        //    encodedImage = encodeFileToBase64Binary(photoFileName);
+        //} catch (Exception e) { e.printStackTrace(); }
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId + "'," +
                 "  credential_preview: {" +
