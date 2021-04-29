@@ -303,7 +303,8 @@ public class GlobalService {
                 "}").jsonString();
         log.info("Create a new schema on the ledger:" + prettyJson(body));
         String response = client.requestPOST(randomStr(apiUrls) + "/schemas", jwtToken, body);
-        schemaId = JsonPath.read(response, "$.schema_id");
+        log.info("response:" + response);
+        schemaId = JsonPath.read(response, "$.sent.schema_id");
     }
 
     public void createCredentialDefinition() {
@@ -315,7 +316,8 @@ public class GlobalService {
                 "}").jsonString();
         log.info("Create a new credential definition on the ledger:" + prettyJson(body));
         String response = client.requestPOST(randomStr(apiUrls) + "/credential-definitions", jwtToken, body);
-        credDefId = JsonPath.read(response, "$.credential_definition_id");
+        log.info("response:" + response);
+        credDefId = JsonPath.read(response, "$.sent.credential_definition_id");
     }
 
     public void sendCredentialOffer(String connectionId, String credentialProposal) {
