@@ -52,6 +52,7 @@ public class GlobalService {
 
     // check options
     static boolean enableRevoke = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_REVOKE", "false"));
+    static boolean enableProblemReport = Boolean.parseBoolean(System.getenv().getOrDefault("ENABLE_PROBLEM_REPORT", "false"));
     static boolean useMultitenancy = Boolean.parseBoolean(System.getenv().getOrDefault("USE_MULTITENANCY", "true"));
 
     @EventListener(ApplicationReadyEvent.class)
@@ -63,6 +64,7 @@ public class GlobalService {
     public String createInvitationUrl() {
         String params = "?public=true";
         String response = client.requestPOST(randomStr(apiUrls) + "/connections/create-invitation" + params, jwtToken, "{}");
+        log.info("response: " + response);
         String invitationUrl = JsonPath.read(response, "$.invitation_url");
         log.info("createInvitationUrl <<< invitationUrl:" + invitationUrl);
         return invitationUrl;
@@ -81,8 +83,12 @@ public class GlobalService {
             case "issue_credential":
                 if (state.equals("proposal_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
-                    String credentialProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.credential_proposal_dict")).jsonString();
-                    sendCredentialOffer(JsonPath.read(body, "$.connection_id"), credentialProposal);
+                    if (enableProblemReport) {
+                        String credExId = JsonPath.read(body, "$.credential_exchange_id");
+                        sendCredentialProlbemReport(credExId);
+                    }
+                    else
+                        sendCredentialOffer(JsonPath.read(body, "$.connection_id"), body);
                 }
                 else if (state.equals("credential_acked")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPrivacyPolicyOffer");
@@ -95,8 +101,7 @@ public class GlobalService {
             case "issue_credential_v2_0":
                 if (state.equals("proposal-received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOfferV2");
-                    String credProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.cred_proposal")).jsonString();
-                    sendCredentialOfferV2(JsonPath.read(body, "$.connection_id"), credProposal);
+                    sendCredentialOfferV2(JsonPath.read(body, "$.connection_id"), body);
                 }
                 else if (state.equals("done")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPrivacyPolicyOfferV2");
@@ -219,6 +224,7 @@ public class GlobalService {
 
         // check if steward wallet already exists
         String response = client.requestGET(randomStr(apiUrls) + "/multitenancy/wallets" + params, null);
+        log.info("response: " + response);
         ArrayList<LinkedHashMap<String, Object>> wallets = JsonPath.read(response, "$.results");
 
         if (wallets.isEmpty()) {
@@ -320,8 +326,25 @@ public class GlobalService {
         credDefId = JsonPath.read(response, "$.sent.credential_definition_id");
     }
 
-    public void sendCredentialOffer(String connectionId, String credentialProposal) {
+    public void sendCredentialProlbemReport(String credExId) {
+        String body = JsonPath.parse("{" +
+                "  description: 'issue credential error'" +
+                "}").jsonString();
+        String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/records/" + credExId + "/problem-report", jwtToken, body);
+        log.info("response: " + response);
+    }
+
+    public void sendPresentProlbemReport(String presExId) {
+        String body = JsonPath.parse("{" +
+                "  description: 'presentation error'" +
+                "}").jsonString();
+        String response = client.requestPOST(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/problem-report", jwtToken, body);
+        log.info("response: " + response);
+    }
+
+    public void sendCredentialOffer(String connectionId, String credExRecord) {
         // uncomment below if you want to get requested credential definition id from alice
+        //String credentialProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(credExRecord, "$.credential_proposal_dict")).jsonString();
         //String requestedCredDefId = JsonPath.read(credentialProposal, "$.cred_def_id");
 
         String encodedImage = "base64EncodedJpegImage";
@@ -330,23 +353,27 @@ public class GlobalService {
         //    encodedImage = encodeFileToBase64Binary(photoFileName);
         //} catch (Exception e) { e.printStackTrace(); }
         String body = JsonPath.parse("{" +
-                "  connection_id: '" + connectionId + "'," +
-                "  cred_def_id: '" + credDefId + "'," +
-                "  credential_proposal: {" +
-                "    attributes: [" +
-                "      { name: 'name', value: 'alice' }," +
-                "      { name: 'date', value: '05-2018' }," +
-                "      { name: 'degree', value: 'maths' }," +
-                "      { name: 'age', value: '25' }," +
-                "      { name: 'photo', value: '" + encodedImage + "', mime-type: 'image/jpeg' }" +
-                "    ]" +
+                "  counter_proposal: {" +
+                "    cred_def_id: '" + credDefId + "'," +
+                "    credential_proposal: {" +
+                "      attributes: [" +
+                "        { name: 'name', value: 'alice' }," +
+                "        { name: 'date', value: '05-2018' }," +
+                "        { name: 'degree', value: 'maths' }," +
+                "        { name: 'age', value: '25' }," +
+                "        { name: 'photo', value: '" + encodedImage + "', mime-type: 'image/jpeg' }" +
+                "      ]" +
+                "    }" +
                 "  }" +
                 "}").jsonString();
-        String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/send", jwtToken, body);
+        String credExId = JsonPath.read(credExRecord, "$.credential_exchange_id");
+        String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/records/" + credExId + "/send-offer", jwtToken, body);
+        log.info("response: " + response);
     }
 
-    public void sendCredentialOfferV2(String connectionId, String credProposal) {
+    public void sendCredentialOfferV2(String connectionId, String credExRecord) {
         // uncomment below if you want to get requested credential definition id from alice
+        //String credProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.cred_proposal")).jsonString();
         //String encodedData = JsonPath.read(credProposal, "$.filters~attach.[0].data.base64");
         //String filter = new String(Base64.decodeBase64(encodedData));
         //String requestedCredDefId = JsonPath.read(filter, "$.cred_def_id");
@@ -374,6 +401,7 @@ public class GlobalService {
                 "  }" +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential-2.0/send", jwtToken, body);
+        log.info("response: " + response);
     }
 
     public void sendPrivacyPolicyOffer(String connectionId) {
@@ -381,6 +409,7 @@ public class GlobalService {
                 "  content: 'PrivacyPolicyOffer. Content here. If you agree, send me a message. PrivacyPolicyAgreed'," +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/connections/" + connectionId + "/send-message", jwtToken, body);
+        log.info("response: " + response);
     }
 
     public void sendPrivacyPolicyOfferV2(String connectionId) {
@@ -388,6 +417,7 @@ public class GlobalService {
                 "  content: 'PrivacyPolicyOfferV2. Content here. If you agree, send me a message. PrivacyPolicyAgreedV2'," +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/connections/" + connectionId + "/send-message", jwtToken, body);
+        log.info("response: " + response);
     }
 
     public void sendProofRequest(String connectionId) {
@@ -431,6 +461,7 @@ public class GlobalService {
                 "  }" +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/present-proof/send-request", jwtToken, body);
+        log.info("response: " + response);
     }
 
     public void sendProofRequestV2(String connectionId) {
@@ -476,6 +507,7 @@ public class GlobalService {
                 "  }" +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/present-proof-2.0/send-request", jwtToken, body);
+        log.info("response: " + response);
     }
 
     public void printProofResult(String verified, String presRequest, String presentation) {

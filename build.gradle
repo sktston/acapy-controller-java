@@ -47,6 +47,13 @@ task faber_revoke(type:JavaExec) {
     args(['--spring.config.location=classpath:/application-faber.properties'])
     environment("ENABLE_REVOKE", "true")
 }
+task faber_problem(type:JavaExec) {
+    group 'application'
+    classpath sourceSets.main.runtimeClasspath
+    main = 'com.sktelecom.ston.controller.faber.Application'
+    args(['--spring.config.location=classpath:/application-faber.properties'])
+    environment("ENABLE_PROBLEM_REPORT", "true")
+}
 task faber_single(type:JavaExec) {
     group 'application'
     classpath sourceSets.main.runtimeClasspath

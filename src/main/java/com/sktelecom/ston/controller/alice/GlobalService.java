@@ -203,6 +203,7 @@ public class GlobalService {
         }
         log.info("invitation: " + invitation);
         String response = client.requestPOST(randomStr(apiUrls) + "/connections/receive-invitation", jwtToken, invitation);
+        log.info("response: " + response);
     }
 
     public void sendCredentialProposal(String connectionId) {
@@ -212,6 +213,7 @@ public class GlobalService {
                 //"  cred_def_id: 'TCXu9qcEoRYX9jWT6CBFAy:3:CL:1614837027:tag'," +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/send-proposal", jwtToken, body);
+        log.info("response: " + response);
     }
 
     public void sendCredentialProposalV2(String connectionId) {
@@ -222,6 +224,7 @@ public class GlobalService {
                 //"  filter: { indy: { cred_def_id: 'TCXu9qcEoRYX9jWT6CBFAy:3:CL:1614837027:tag' } }," +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential-2.0/send-proposal", jwtToken, body);
+        log.info("response: " + response);
     }
 
     public void sendPrivacyPolicyAgreed(String connectionId) {
@@ -229,6 +232,7 @@ public class GlobalService {
                 "  content: 'PrivacyPolicyAgreed'," +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/connections/" + connectionId + "/send-message", jwtToken, body);
+        log.info("response: " + response);
     }
 
     public void sendPrivacyPolicyAgreedV2(String connectionId) {
@@ -236,14 +240,17 @@ public class GlobalService {
                 "  content: 'PrivacyPolicyAgreedV2'," +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/connections/" + connectionId + "/send-message", jwtToken, body);
+        log.info("response: " + response);
     }
 
     public void sendCredentialRequest(String credExId) {
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/records/" + credExId + "/send-request", jwtToken, "{}");
+        log.info("response: " + response);
     }
 
     public void sendCredentialRequestV2(String credExId) {
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential-2.0/records/" + credExId + "/send-request", jwtToken, "{}");
+        log.info("response: " + response);
     }
 
     public void sendProof(String presExId, String presentationRequest) {
@@ -290,6 +297,7 @@ public class GlobalService {
                 .put("$", "self_attested_attributes", selfAttrs).jsonString();
 
         response = client.requestPOST(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/send-presentation", jwtToken, body);
+        log.info("response: " + response);
     }
 
     public void sendProofV2(String presExId, String presRequest) {
@@ -342,11 +350,13 @@ public class GlobalService {
                 "}").jsonString();
 
         response = client.requestPOST(randomStr(apiUrls) + "/present-proof-2.0/records/" + presExId + "/send-presentation", jwtToken, body);
+        log.info("response: " + response);
     }
 
     public void deleteWallet() {
         log.info("Delete my wallet - walletName: " + walletName + ", walletId: " + walletId);
         String response = client.requestPOST(randomStr(apiUrls) + "/multitenancy/wallet/" + walletId + "/remove", null, "{}");
+        log.info("response: " + response);
     }
 
     public void deleteWalletAndExit() {
