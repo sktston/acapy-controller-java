@@ -90,16 +90,14 @@ public class GlobalService {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> checkCredentialProposal && sendCredentialOffer");
                     String credExId = JsonPath.read(body, "$.credential_exchange_id");
                     String credentialProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.credential_proposal_dict")).jsonString();
-                    if (checkCredentialProposal(credExId, credentialProposal)) {
+                    if (checkCredentialProposal(credExId, credentialProposal))
                         sendCredentialOffer(credExId);
-                    }
                 }
                 else if (state.equals("credential_acked")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> issue credential successfully");
-                    if (enableRevoke) {
-                        String credExId = JsonPath.read(body, "$.credential_exchange_id");
+                    String credExId = JsonPath.read(body, "$.credential_exchange_id");
+                    if (enableRevoke)
                         revokeCredential(credExId);
-                    }
                 }
                 break;
             case "issue_credential_v2_0":
@@ -111,16 +109,14 @@ public class GlobalService {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> checkCredentialProposalV2 && sendCredentialOfferV2");
                     String credExId = JsonPath.read(body, "$.cred_ex_id");
                     String credProposal = JsonPath.parse((LinkedHashMap) JsonPath.read(body, "$.cred_proposal")).jsonString();
-                    if (checkCredentialProposalV2(credExId, credProposal)) {
+                    if (checkCredentialProposalV2(credExId, credProposal))
                         sendCredentialOfferV2(credExId);
-                    }
                 }
                 else if (state.equals("done")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> issue credential successfully");
-                    if (enableRevoke) {
-                        String credExId = JsonPath.read(body, "$.cred_ex_id");
+                    String credExId = JsonPath.read(body, "$.cred_ex_id");
+                    if (enableRevoke)
                         revokeCredential(credExId);
-                    }
                 }
                 break;
             case "basicmessages":
@@ -145,10 +141,9 @@ public class GlobalService {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> checkPresentationProposal && sendPrivacyPolicyOffer");
                     String presExId = JsonPath.read(body, "$.presentation_exchange_id");
                     String presentationProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.presentation_proposal_dict")).jsonString();
-                    if (checkPresentationProposal(presExId, presentationProposal)) {
-                        String connectionId = JsonPath.read(body, "$.connection_id");
+                    String connectionId = JsonPath.read(body, "$.connection_id");
+                    if (checkPresentationProposal(presExId, presentationProposal))
                         sendPrivacyPolicyOffer(connectionId);
-                    }
                 }
                 else if (state.equals("verified")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> printProofResult");
@@ -167,10 +162,9 @@ public class GlobalService {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> checkPresentationProposalV2 && sendPrivacyPolicyOfferV2");
                     String presExId = JsonPath.read(body, "$.pres_ex_id");
                     String presProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.pres_proposal")).jsonString();
-                    if (checkPresentationProposalV2(presExId, presProposal)) {
-                        String connectionId = JsonPath.read(body, "$.connection_id");
+                    String connectionId = JsonPath.read(body, "$.connection_id");
+                    if (checkPresentationProposalV2(presExId, presProposal))
                         sendPrivacyPolicyOfferV2(connectionId);
-                    }
                 }
                 else if (state.equals("done")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> printProofResultV2");
