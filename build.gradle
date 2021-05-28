@@ -59,7 +59,7 @@ task faber_present_problem(type:JavaExec) {
     classpath sourceSets.main.runtimeClasspath
     main = 'com.sktelecom.ston.controller.faber.Application'
     args(['--spring.config.location=classpath:/application-faber.properties'])
-    environment("ENABLE_CPRESENT_PROBLEM", "true")
+    environment("ENABLE_PRESENT_PROBLEM", "true")
 }
 task faber_single(type:JavaExec) {
     group 'application'

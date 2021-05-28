@@ -87,23 +87,19 @@ public class GlobalService {
                     log.warn("  - body:" + body);
                 }
                 else if (state.equals("proposal_received")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> checkCredentialProposal && sendCredentialOffer");
                     String credExId = JsonPath.read(body, "$.credential_exchange_id");
-                    if (enableCredProblem) {
-                        log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredProlbemReport (enableCredProblem)");
-                        sendCredProlbemReport(credExId);
-                    }
-                    else {
-                        log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOffer");
-                        String credentialProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.credential_proposal_dict")).jsonString();
-                        sendCredentialOffer(credExId, credentialProposal);
+                    String credentialProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.credential_proposal_dict")).jsonString();
+                    if (checkCredentialProposal(credExId, credentialProposal)) {
+                        sendCredentialOffer(credExId);
                     }
                 }
                 else if (state.equals("credential_acked")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPrivacyPolicyOffer");
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> issue credential successfully");
                     if (enableRevoke) {
-                        revokeCredential(JsonPath.read(body, "$.credential_exchange_id"));
+                        String credExId = JsonPath.read(body, "$.credential_exchange_id");
+                        revokeCredential(credExId);
                     }
-                    sendPrivacyPolicyOffer(JsonPath.read(body, "$.connection_id"));
                 }
                 break;
             case "issue_credential_v2_0":
@@ -112,40 +108,47 @@ public class GlobalService {
                     log.warn("  - body:" + body);
                 }
                 else if (state.equals("proposal-received")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> checkCredentialProposalV2 && sendCredentialOfferV2");
                     String credExId = JsonPath.read(body, "$.cred_ex_id");
-                    if (enableCredProblem) {
-                        log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredProlbemReportV2 (enableCredProblem)");
-                        sendCredProlbemReportV2(credExId);
-                    }
-                    else {
-                        log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialOfferV2");
-                        String credProposal = JsonPath.parse((LinkedHashMap) JsonPath.read(body, "$.cred_proposal")).jsonString();
-                        sendCredentialOfferV2(credExId, credProposal);
+                    String credProposal = JsonPath.parse((LinkedHashMap) JsonPath.read(body, "$.cred_proposal")).jsonString();
+                    if (checkCredentialProposalV2(credExId, credProposal)) {
+                        sendCredentialOfferV2(credExId);
                     }
                 }
                 else if (state.equals("done")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPrivacyPolicyOfferV2");
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> issue credential successfully");
                     if (enableRevoke) {
-                        revokeCredential(JsonPath.read(body, "$.cred_ex_id"));
+                        String credExId = JsonPath.read(body, "$.cred_ex_id");
+                        revokeCredential(credExId);
                     }
-                    sendPrivacyPolicyOfferV2(JsonPath.read(body, "$.connection_id"));
                 }
                 break;
             case "basicmessages":
                 String content = JsonPath.read(body, "$.content");
                 if (content.contains("PrivacyPolicyAgreedV2")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyAgreed) -> sendProofRequestV2");
-                    sendProofRequestV2(JsonPath.read(body, "$.connection_id"));
+                    String connectionId = JsonPath.read(body, "$.connection_id");
+                    sendProofRequestV2(connectionId);
                 }
                 else if (content.contains("PrivacyPolicyAgreed")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyAgreed) -> sendProofRequest");
-                    sendProofRequest(JsonPath.read(body, "$.connection_id"));
+                    String connectionId = JsonPath.read(body, "$.connection_id");
+                    sendProofRequest(connectionId);
                 }
                 break;
             case "present_proof":
                 if (state == null) {
                     log.warn("- Case (topic:" + topic + ", ProblemReport) -> PrintBody");
                     log.warn("  - body:" + body);
+                }
+                else if (state.equals("proposal_received")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> checkPresentationProposal && sendPrivacyPolicyOffer");
+                    String presExId = JsonPath.read(body, "$.presentation_exchange_id");
+                    String presentationProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.presentation_proposal_dict")).jsonString();
+                    if (checkPresentationProposal(presExId, presentationProposal)) {
+                        String connectionId = JsonPath.read(body, "$.connection_id");
+                        sendPrivacyPolicyOffer(connectionId);
+                    }
                 }
                 else if (state.equals("verified")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> printProofResult");
@@ -159,6 +162,15 @@ public class GlobalService {
                     log.warn("- Case (topic:" + topic + ", ProblemReport) -> PrintBody");
                     log.warn("  - body:" + body);
                 }
+                else if (state.equals("proposal_received")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> checkPresentationProposalV2 && sendPrivacyPolicyOfferV2");
+                    String presExId = JsonPath.read(body, "$.pres_ex_id");
+                    String presProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.pres_proposal")).jsonString();
+                    if (checkPresentationProposalV2(presExId, presProposal)) {
+                        String connectionId = JsonPath.read(body, "$.connection_id");
+                        sendPrivacyPolicyOfferV2(connectionId);
+                    }
+                }
                 else if (state.equals("done")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> printProofResultV2");
                     String presReq = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.pres_request")).jsonString();
@@ -168,7 +180,7 @@ public class GlobalService {
                 break;
             case "problem_report":
                 log.warn("- Case (topic:" + topic + ") -> Print body");
-                log.warn("  - body:" + prettyJson(body));
+                log.warn("  - body:" + body);
                 break;
             case "revocation_registry":
             case "issuer_cred_rev":
@@ -354,34 +366,47 @@ public class GlobalService {
         credDefId = JsonPath.read(response, "$.sent.credential_definition_id");
     }
 
-    public void sendCredProlbemReport(String credExId) {
+    public void sendCredProblemReport(String credExId, String description) {
         String body = JsonPath.parse("{" +
-                "  description: 'issue credential error message'" +
+                "  description: '" + description + "'" +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential/records/" + credExId + "/problem-report", jwtToken, body);
         log.info("response: " + response);
     }
 
-    public void sendCredProlbemReportV2(String credExId) {
+    public void sendCredProblemReportV2(String credExId, String description) {
         String body = JsonPath.parse("{" +
-                "  description: 'issue credential error message'" +
+                "  description: '" + description + "'" +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential-2.0/records/" + credExId + "/problem-report", jwtToken, body);
         log.info("response: " + response);
     }
 
-    public void sendPresentProlbemReport(String presExId) {
-        String body = JsonPath.parse("{" +
-                "  description: 'presentation error'" +
-                "}").jsonString();
-        String response = client.requestPOST(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/problem-report", jwtToken, body);
-        log.info("response: " + response);
-    }
-
-    public void sendCredentialOffer(String credExId, String credentialProposal) {
+    public boolean checkCredentialProposal(String credExId, String credentialProposal) {
         // uncomment below if you want to get requested credential definition id from alice
         //String requestedCredDefId = JsonPath.read(credentialProposal, "$.cred_def_id");
 
+        if (enableCredProblem) {
+            sendCredProblemReport(credExId, "issue credential error message");
+            return false;
+        }
+        return true;
+    }
+
+    public boolean checkCredentialProposalV2(String credExId, String credProposal) {
+        // uncomment below if you want to get requested credential definition id from alice
+        //String encodedData = JsonPath.read(credProposal, "$.filters~attach.[0].data.base64");
+        //String filter = new String(Base64.decodeBase64(encodedData));
+        //String requestedCredDefId = JsonPath.read(filter, "$.cred_def_id");
+
+        if (enableCredProblem) {
+            sendCredProblemReportV2(credExId, "issue credential error message");
+            return false;
+        }
+        return true;
+    }
+
+    public void sendCredentialOffer(String credExId) {
         String encodedImage = "base64EncodedJpegImage";
         // uncomment below if you want to use actual encoded jpeg image
         //try {
@@ -405,12 +430,7 @@ public class GlobalService {
         log.info("response: " + response);
     }
 
-    public void sendCredentialOfferV2(String credExId, String credProposal) {
-        // uncomment below if you want to get requested credential definition id from alice
-        //String encodedData = JsonPath.read(credProposal, "$.filters~attach.[0].data.base64");
-        //String filter = new String(Base64.decodeBase64(encodedData));
-        //String requestedCredDefId = JsonPath.read(filter, "$.cred_def_id");
-
+    public void sendCredentialOfferV2(String credExId) {
         String encodedImage = "base64EncodedJpegImage";
         // uncomment below if you want to use actual encoded jpeg image
         //try {
@@ -434,6 +454,42 @@ public class GlobalService {
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential-2.0/records/" + credExId + "/send-offer", jwtToken, body);
         log.info("response: " + response);
+    }
+
+    public void sendPresentProblemReport(String presExId, String description) {
+        String body = JsonPath.parse("{" +
+                "  description: '" + description + "'" +
+                "}").jsonString();
+        String response = client.requestPOST(randomStr(apiUrls) + "/present-proof/records/" + presExId + "/problem-report", jwtToken, body);
+        log.info("response: " + response);
+    }
+
+    public void sendPresentProblemReportV2(String presExId, String description) {
+        String body = JsonPath.parse("{" +
+                "  description: '" + description + "'" +
+                "}").jsonString();
+        String response = client.requestPOST(randomStr(apiUrls) + "/present-proof-2.0/records/" + presExId + "/problem-report", jwtToken, body);
+        log.info("response: " + response);
+    }
+
+    public boolean checkPresentationProposal(String presExId, String presentationProposal) {
+        // currently presentationProposal does not need to parse
+
+        if (enablePresentProblem) {
+            sendPresentProblemReport(presExId, "presentation proof error message");
+            return false;
+        }
+        return true;
+    }
+
+    public boolean checkPresentationProposalV2(String presExId, String presProposal) {
+        // currently presProposal does not need to parse
+
+        if (enablePresentProblem) {
+            sendPresentProblemReportV2(presExId, "presentation proof error message");
+            return false;
+        }
+        return true;
     }
 
     public void sendPrivacyPolicyOffer(String connectionId) {

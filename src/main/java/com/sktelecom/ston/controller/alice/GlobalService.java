@@ -82,11 +82,13 @@ public class GlobalService {
                 if (state.equals("active")) {
                     if (protocolVersion.equals("2.0")) {
                         log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialProposalV2");
-                        sendCredentialProposalV2(JsonPath.read(body, "$.connection_id"));
+                        String connectionId = JsonPath.read(body, "$.connection_id");
+                        sendCredentialProposalV2(connectionId);
                     }
                     else {
                         log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialProposal");
-                        sendCredentialProposal(JsonPath.read(body, "$.connection_id"));
+                        String connectionId = JsonPath.read(body, "$.connection_id");
+                        sendCredentialProposal(connectionId);
                     }
                 }
                 break;
@@ -97,7 +99,13 @@ public class GlobalService {
                 }
                 else if (state.equals("offer_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequest");
-                    sendCredentialRequest(JsonPath.read(body, "$.credential_exchange_id"));
+                    String credExId = JsonPath.read(body, "$.credential_exchange_id");
+                    sendCredentialRequest(credExId);
+                }
+                else if (state.equals("credential_acked")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPresentationProposal");
+                    String connectionId = JsonPath.read(body, "$.connection_id");
+                    sendPresentationProposal(connectionId);
                 }
                 break;
             case "issue_credential_v2_0":
@@ -107,18 +115,26 @@ public class GlobalService {
                 }
                 else if (state.equals("offer-received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequestV2");
-                    sendCredentialRequestV2(JsonPath.read(body, "$.cred_ex_id"));
+                    String credExId = JsonPath.read(body, "$.cred_ex_id");
+                    sendCredentialRequestV2(credExId);
+                }
+                else if (state.equals("done")) {
+                    log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPresentationProposaV2");
+                    String connectionId = JsonPath.read(body, "$.connection_id");
+                    sendPresentationProposalV2(connectionId);
                 }
                 break;
             case "basicmessages":
                 String content = JsonPath.read(body, "$.content");
                 if (content.contains("PrivacyPolicyOfferV2")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyOffer) -> sendPrivacyPolicyAgreedV2");
-                    sendPrivacyPolicyAgreedV2(JsonPath.read(body, "$.connection_id"));
+                    String connectionId = JsonPath.read(body, "$.connection_id");
+                    sendPrivacyPolicyAgreedV2(connectionId);
                 }
                 else if (content.contains("PrivacyPolicyOffer")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyOffer) -> sendPrivacyPolicyAgreed");
-                    sendPrivacyPolicyAgreed(JsonPath.read(body, "$.connection_id"));
+                    String connectionId = JsonPath.read(body, "$.connection_id");
+                    sendPrivacyPolicyAgreed(connectionId);
                 }
                 break;
             case "present_proof":
@@ -128,8 +144,9 @@ public class GlobalService {
                 }
                 else if (state.equals("request_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProof");
+                    String presExId = JsonPath.read(body, "$.presentation_exchange_id");
                     String presentationRequest = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.presentation_request")).jsonString();
-                    sendProof(JsonPath.read(body, "$.presentation_exchange_id"), presentationRequest);
+                    sendProof(presExId, presentationRequest);
                 }
                 else if (state.equals("presentation_acked")) {
                     if (useMultitenancy) {
@@ -240,6 +257,27 @@ public class GlobalService {
                 //"  filter: { indy: { cred_def_id: 'TCXu9qcEoRYX9jWT6CBFAy:3:CL:1614837027:tag' } }," +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential-2.0/send-proposal", jwtToken, body);
+        log.info("response: " + response);
+    }
+
+    public void sendPresentationProposal(String connectionId) {
+        String body = JsonPath.parse("{" +
+                "  connection_id: '" + connectionId  + "'," +
+                "  presentation_proposal: {" +
+                "    attributes: []," +
+                "    predicates: []" +
+                "  }" +
+                "}").jsonString();
+        String response = client.requestPOST(randomStr(apiUrls) + "/present-proof/send-proposal", jwtToken, body);
+        log.info("response: " + response);
+    }
+
+    public void sendPresentationProposalV2(String connectionId) {
+        String body = JsonPath.parse("{" +
+                "  connection_id: '" + connectionId  + "'," +
+                "  presentation_proposal: {}" +
+                "}").jsonString();
+        String response = client.requestPOST(randomStr(apiUrls) + "/present-proof/send-proposal", jwtToken, body);
         log.info("response: " + response);
     }
 
