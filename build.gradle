@@ -47,12 +47,19 @@ task faber_revoke(type:JavaExec) {
     args(['--spring.config.location=classpath:/application-faber.properties'])
     environment("ENABLE_REVOKE", "true")
 }
-task faber_problem(type:JavaExec) {
+task faber_cred_problem(type:JavaExec) {
     group 'application'
     classpath sourceSets.main.runtimeClasspath
     main = 'com.sktelecom.ston.controller.faber.Application'
     args(['--spring.config.location=classpath:/application-faber.properties'])
-    environment("ENABLE_PROBLEM_REPORT", "true")
+    environment("ENABLE_CRED_PROBLEM", "true")
+}
+task faber_present_problem(type:JavaExec) {
+    group 'application'
+    classpath sourceSets.main.runtimeClasspath
+    main = 'com.sktelecom.ston.controller.faber.Application'
+    args(['--spring.config.location=classpath:/application-faber.properties'])
+    environment("ENABLE_CPRESENT_PROBLEM", "true")
 }
 task faber_single(type:JavaExec) {
     group 'application'

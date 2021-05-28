@@ -91,13 +91,21 @@ public class GlobalService {
                 }
                 break;
             case "issue_credential":
-                if (state.equals("offer_received")) {
+                if (state == null) {
+                    log.warn("- Case (topic:" + topic + ", ProblemReport) -> PrintBody");
+                    log.warn("  - body:" + body);
+                }
+                else if (state.equals("offer_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequest");
                     sendCredentialRequest(JsonPath.read(body, "$.credential_exchange_id"));
                 }
                 break;
             case "issue_credential_v2_0":
-                if (state.equals("offer-received")) {
+                if (state == null) {
+                    log.warn("- Case (topic:" + topic + ", ProblemReport) -> PrintBody");
+                    log.warn("  - body:" + body);
+                }
+                else if (state.equals("offer-received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequestV2");
                     sendCredentialRequestV2(JsonPath.read(body, "$.cred_ex_id"));
                 }
@@ -114,7 +122,11 @@ public class GlobalService {
                 }
                 break;
             case "present_proof":
-                if (state.equals("request_received")) {
+                if (state == null) {
+                    log.warn("- Case (topic:" + topic + ", ProblemReport) -> PrintBody");
+                    log.warn("  - body:" + body);
+                }
+                else if (state.equals("request_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProof");
                     String presentationRequest = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.presentation_request")).jsonString();
                     sendProof(JsonPath.read(body, "$.presentation_exchange_id"), presentationRequest);
@@ -131,7 +143,11 @@ public class GlobalService {
                 }
                 break;
             case "present_proof_v2_0":
-                if (state.equals("request-received")) {
+                if (state == null) {
+                    log.warn("- Case (topic:" + topic + ", ProblemReport) -> PrintBody");
+                    log.warn("  - body:" + body);
+                }
+                else if (state.equals("request-received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProofV2");
                     String presRequest = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.pres_request")).jsonString();
                     sendProofV2(JsonPath.read(body, "$.pres_ex_id"), presRequest);
