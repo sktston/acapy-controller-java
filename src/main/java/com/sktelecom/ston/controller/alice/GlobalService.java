@@ -182,7 +182,7 @@ public class GlobalService {
                 break;
             case "problem_report":
                 log.warn("- Case (topic:" + topic + ") -> Print body");
-                log.warn("  - body:" + prettyJson(body));
+                log.warn("  - body:" + body);
                 break;
             case "revocation_registry":
             case "issuer_cred_rev":
