@@ -154,7 +154,8 @@ public class GlobalService {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> printProofResult");
                     String presRequest = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.presentation_request")).jsonString();
                     String presentation = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.presentation")).jsonString();
-                    printProofResult(JsonPath.read(body, "$.verified"), presRequest, presentation);
+                    String verified = JsonPath.read(body, "$.verified");
+                    printProofResult(verified, presRequest, presentation);
                 }
                 break;
             case "present_proof_v2_0":
@@ -175,7 +176,8 @@ public class GlobalService {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> printProofResultV2");
                     String presReq = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.pres_request")).jsonString();
                     String pres = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.pres")).jsonString();
-                    printProofResultV2(JsonPath.read(body, "$.verified"), presReq, pres);
+                    String verified = JsonPath.read(body, "$.verified");
+                    printProofResultV2(verified, presReq, pres);
                 }
                 break;
             case "problem_report":
