@@ -94,8 +94,9 @@ public class GlobalService {
                 break;
             case "issue_credential":
                 if (state == null) {
-                    log.warn("- Case (topic:" + topic + ", ProblemReport) -> PrintBody");
-                    log.warn("  - body:" + body);
+                    log.warn("- Case (topic:" + topic + ", ProblemReport) -> Print Error Message");
+                    String errorMsg = JsonPath.read(body, "$.error_msg");
+                    log.warn("  - error_msg: " + errorMsg);
                 }
                 else if (state.equals("offer_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequest");
@@ -110,8 +111,9 @@ public class GlobalService {
                 break;
             case "issue_credential_v2_0":
                 if (state == null) {
-                    log.warn("- Case (topic:" + topic + ", ProblemReport) -> PrintBody");
-                    log.warn("  - body:" + body);
+                    log.warn("- Case (topic:" + topic + ", ProblemReport) -> Print Error Message");
+                    String errorMsg = JsonPath.read(body, "$.error_msg");
+                    log.warn("  - error_msg: " + errorMsg);
                 }
                 else if (state.equals("offer-received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequestV2");
@@ -139,8 +141,9 @@ public class GlobalService {
                 break;
             case "present_proof":
                 if (state == null) {
-                    log.warn("- Case (topic:" + topic + ", ProblemReport) -> PrintBody");
-                    log.warn("  - body:" + body);
+                    log.warn("- Case (topic:" + topic + ", ProblemReport) -> Print Error Message");
+                    String errorMsg = JsonPath.read(body, "$.error_msg");
+                    log.warn("  - error_msg: " + errorMsg);
                 }
                 else if (state.equals("request_received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProof");
@@ -161,8 +164,9 @@ public class GlobalService {
                 break;
             case "present_proof_v2_0":
                 if (state == null) {
-                    log.warn("- Case (topic:" + topic + ", ProblemReport) -> PrintBody");
-                    log.warn("  - body:" + body);
+                    log.warn("- Case (topic:" + topic + ", ProblemReport) -> Print Error Message");
+                    String errorMsg = JsonPath.read(body, "$.error_msg");
+                    log.warn("  - error_msg: " + errorMsg);
                 }
                 else if (state.equals("request-received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProofV2");
