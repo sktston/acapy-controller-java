@@ -279,9 +279,11 @@ public class GlobalService {
     public void sendPresentationProposalV2(String connectionId) {
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId  + "'," +
-                "  presentation_proposal: {}" +
+                "  presentation_proposal: {" +
+                "    indy: {}" +
+                "  }" +
                 "}").jsonString();
-        String response = client.requestPOST(randomStr(apiUrls) + "/present-proof/send-proposal", jwtToken, body);
+        String response = client.requestPOST(randomStr(apiUrls) + "/present-proof-2.0/send-proposal", jwtToken, body);
         log.info("response: " + response);
     }
 

@@ -111,8 +111,10 @@ public class GlobalService {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> checkCredentialProposalV2 && sendCredentialOfferV2");
                     String credExId = JsonPath.read(body, "$.cred_ex_id");
                     String credProposal = JsonPath.parse((LinkedHashMap) JsonPath.read(body, "$.cred_proposal")).jsonString();
+                    String connectionId = JsonPath.read(body, "$.connection_id");
                     if (checkCredentialProposalV2(credExId, credProposal))
-                        sendCredentialOfferV2(credExId);
+                        sendCredentialOfferV2WithNew(connectionId);
+                        //sendCredentialOfferV2(credExId);
                 }
                 else if (state.equals("done")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> issue credential successfully");
@@ -162,7 +164,7 @@ public class GlobalService {
                     String errorMsg = JsonPath.read(body, "$.error_msg");
                     log.warn("  - error_msg: " + errorMsg);
                 }
-                else if (state.equals("proposal_received")) {
+                else if (state.equals("proposal-received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> checkPresentationProposalV2 && sendPrivacyPolicyOfferV2");
                     String presExId = JsonPath.read(body, "$.pres_ex_id");
                     String presProposal = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.pres_proposal")).jsonString();
@@ -453,6 +455,34 @@ public class GlobalService {
                 "  }" +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential-2.0/records/" + credExId + "/send-offer", jwtToken, body);
+        log.info("response: " + response);
+    }
+
+    // TODO: Replace with sendCredentialOfferV2 when bug fixed
+    public void sendCredentialOfferV2WithNew(String connectionId) {
+        String encodedImage = "base64EncodedJpegImage";
+        // uncomment below if you want to use actual encoded jpeg image
+        //try {
+        //    encodedImage = encodeFileToBase64Binary(photoFileName);
+        //} catch (Exception e) { e.printStackTrace(); }
+        String body = JsonPath.parse("{" +
+                "  connection_id: '" + connectionId  + "'," +
+                "  credential_preview: {" +
+                "    attributes: [" +
+                "      { name: 'name', value: 'alice' }," +
+                "      { name: 'date', value: '05-2018' }," +
+                "      { name: 'degree', value: 'maths' }," +
+                "      { name: 'age', value: '25' }," +
+                "      { name: 'photo', value: '" + encodedImage + "', mime-type: 'image/jpeg' }" +
+                "    ]" +
+                "  }," +
+                "  filter: {" +
+                "    indy: {" +
+                "      cred_def_id: '" + credDefId + "'," +
+                "    }" +
+                "  }" +
+                "}").jsonString();
+        String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential-2.0/send-offer", jwtToken, body);
         log.info("response: " + response);
     }
 
