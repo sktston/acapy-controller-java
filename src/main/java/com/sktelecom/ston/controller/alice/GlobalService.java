@@ -73,11 +73,6 @@ public class GlobalService {
         if (useMultitenancy)
             provisionController();
 
-        if (useJsonLd) {
-            createKeyDid();
-            log.info("- keyDid: " + keyDid);
-        }
-
         log.info("- protocol version: " + protocolVersion);
         log.info("Receive invitation from faber controller");
         receiveInvitation();
@@ -236,6 +231,11 @@ public class GlobalService {
         log.info("- wallet ID: " + walletId);
         log.info("- wallet type: " + walletType);
         log.info("- jwt token: " + jwtToken);
+
+        if (useJsonLd) {
+            createKeyDid();
+            log.info("- keyDid: " + keyDid);
+        }
     }
 
     public void createWallet() {
