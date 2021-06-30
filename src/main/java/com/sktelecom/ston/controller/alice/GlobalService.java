@@ -46,6 +46,7 @@ public class GlobalService {
     String jwtToken; // jwt token for wallet
     String imageUrl;
     String webhookUrl; // url to receive webhook messagess
+    String keyDid; // key method did
 
     // faber configuration
     @Value("${faberControllerUrl}")
@@ -56,14 +57,26 @@ public class GlobalService {
     long afterTime;
 
     // check options
+    static boolean useJsonLd = Boolean.parseBoolean(System.getenv().getOrDefault("USE_JSON_LD", "false"));
     static boolean useMultitenancy = Boolean.parseBoolean(System.getenv().getOrDefault("USE_MULTITENANCY", "true"));
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
         apiUrls = apiUrlList.split(",");
         beforeTime = System.currentTimeMillis();
+
+        if (useJsonLd && !protocolVersion.equals("2.0")) {
+            log.info("JSON LD demo works only with protocolVersion 2.0. Set protocolVersion to 2.0");
+            System.exit(0);
+        }
+
         if (useMultitenancy)
             provisionController();
+
+        if (useJsonLd) {
+            createKeyDid();
+            log.info("- keyDid: " + keyDid);
+        }
 
         log.info("- protocol version: " + protocolVersion);
         log.info("Receive invitation from faber controller");
@@ -83,7 +96,10 @@ public class GlobalService {
                     if (protocolVersion.equals("2.0")) {
                         log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialProposalV2");
                         String connectionId = JsonPath.read(body, "$.connection_id");
-                        sendCredentialProposalV2(connectionId);
+                        if(useJsonLd)
+                            sendCredentialProposalV2JsonLd(connectionId);
+                        else
+                            sendCredentialProposalV2(connectionId);
                     }
                     else {
                         log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialProposal");
@@ -118,25 +134,24 @@ public class GlobalService {
                 else if (state.equals("offer-received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialRequestV2");
                     String credExId = JsonPath.read(body, "$.cred_ex_id");
-                    sendCredentialRequestV2(credExId);
+                    String credFormat = JsonPath.read(body, "$.cred_offer.formats.[0].attach_id");
+                    if (credFormat.equals("indy"))
+                        sendCredentialRequestV2(credExId);
+                    else if (credFormat.equals("ld_proof"))
+                        sendCredentialRequestV2JsonLd(credExId);
+                    else
+                        log.warn("credFormat is not indy or ld_proof");
                 }
                 else if (state.equals("done")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPresentationProposaV2");
                     String connectionId = JsonPath.read(body, "$.connection_id");
-                    sendPresentationProposalV2(connectionId);
-                }
-                break;
-            case "basicmessages":
-                String content = JsonPath.read(body, "$.content");
-                if (content.contains("PrivacyPolicyOfferV2")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyOffer) -> sendPrivacyPolicyAgreedV2");
-                    String connectionId = JsonPath.read(body, "$.connection_id");
-                    sendPrivacyPolicyAgreedV2(connectionId);
-                }
-                else if (content.contains("PrivacyPolicyOffer")) {
-                    log.info("- Case (topic:" + topic + ", state:" + state + ", PrivacyPolicyOffer) -> sendPrivacyPolicyAgreed");
-                    String connectionId = JsonPath.read(body, "$.connection_id");
-                    sendPrivacyPolicyAgreed(connectionId);
+                    String credFormat = JsonPath.read(body, "$.cred_issue.formats.[0].attach_id");
+                    if (credFormat.equals("indy"))
+                        sendPresentationProposalV2(connectionId);
+                    else if (credFormat.equals("ld_proof"))
+                        sendPresentationProposalV2JsonLd(connectionId);
+                    else
+                        log.warn("credFormat is not indy or ld_proof");
                 }
                 break;
             case "present_proof":
@@ -170,8 +185,15 @@ public class GlobalService {
                 }
                 else if (state.equals("request-received")) {
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendProofV2");
+                    String presExId = JsonPath.read(body, "$.pres_ex_id");
                     String presRequest = JsonPath.parse((LinkedHashMap)JsonPath.read(body, "$.pres_request")).jsonString();
-                    sendProofV2(JsonPath.read(body, "$.pres_ex_id"), presRequest);
+                    String presFormat = JsonPath.read(body, "$.pres_request.formats.[0].attach_id");
+                    if (presFormat.equals("indy"))
+                        sendProofV2(presExId, presRequest);
+                    else if (presFormat.equals("dif"))
+                        sendProofV2JsonLd(presExId, presRequest);
+                    else
+                        log.warn("presFormat is not indy or dif");
                 }
                 else if (state.equals("done")) {
                     if (useMultitenancy) {
@@ -188,9 +210,11 @@ public class GlobalService {
                 log.warn("- Case (topic:" + topic + ") -> Print body");
                 log.warn("  - body:" + body);
                 break;
+            case "basicmessages":
             case "revocation_registry":
             case "issuer_cred_rev":
             case "issue_credential_v2_0_indy":
+            case "issue_credential_v2_0_ld_proof":
                 break;
             default:
                 log.warn("- Warning Unexpected topic:" + topic);
@@ -230,6 +254,19 @@ public class GlobalService {
         jwtToken = JsonPath.read(response, "$.token");
     }
 
+    public void createKeyDid() {
+        String body = JsonPath.parse("{" +
+                "  method: 'key'," +
+                "  options: {" + "" +
+                "    key_type: 'bls12381g2'" +
+                "  }" +
+                "}").jsonString();
+        log.info("Create a new key did:" + body);
+        String response = client.requestPOST(randomStr(apiUrls) + "/wallet/did/create", jwtToken, body);
+        log.info("response: " + response);
+        keyDid = JsonPath.read(response, "$.result.did");
+    }
+
     public void receiveInvitation() {
         String invitationUrl = client.requestGET(faberControllerUrl + "/invitation-url", "");
         log.info("invitation-url: " + invitationUrl);
@@ -264,6 +301,20 @@ public class GlobalService {
         log.info("response: " + response);
     }
 
+    public void sendCredentialProposalV2JsonLd(String connectionId) {
+        String body = JsonPath.parse("{" +
+                "  connection_id: '" + connectionId  + "'," +
+                "  filter: {" +
+                "    ld_proof: {" +
+                "      credential: { @context:[https://www.w3.org/2018/credentials/v1], credentialSubject:{}, issuanceDate:'2020-01-01T12:00:00Z', issuer:{}, type:[VerifiableCredential] }," +
+                "      options: { proofType:'' }," +
+                "    }" +
+                "  }" +
+                "}").jsonString();
+        String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential-2.0/send-proposal", jwtToken, body);
+        log.info("response: " + response);
+    }
+
     public void sendPresentationProposal(String connectionId) {
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId  + "'," +
@@ -287,19 +338,14 @@ public class GlobalService {
         log.info("response: " + response);
     }
 
-    public void sendPrivacyPolicyAgreed(String connectionId) {
+    public void sendPresentationProposalV2JsonLd(String connectionId) {
         String body = JsonPath.parse("{" +
-                "  content: 'PrivacyPolicyAgreed'," +
+                "  connection_id: '" + connectionId  + "'," +
+                "  presentation_proposal: {" +
+                "    indy: { name:'dif' }" +
+                "  }" +
                 "}").jsonString();
-        String response = client.requestPOST(randomStr(apiUrls) + "/connections/" + connectionId + "/send-message", jwtToken, body);
-        log.info("response: " + response);
-    }
-
-    public void sendPrivacyPolicyAgreedV2(String connectionId) {
-        String body = JsonPath.parse("{" +
-                "  content: 'PrivacyPolicyAgreedV2'," +
-                "}").jsonString();
-        String response = client.requestPOST(randomStr(apiUrls) + "/connections/" + connectionId + "/send-message", jwtToken, body);
+        String response = client.requestPOST(randomStr(apiUrls) + "/present-proof-2.0/send-proposal", jwtToken, body);
         log.info("response: " + response);
     }
 
@@ -310,6 +356,12 @@ public class GlobalService {
 
     public void sendCredentialRequestV2(String credExId) {
         String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential-2.0/records/" + credExId + "/send-request", jwtToken, "{}");
+        log.info("response: " + response);
+    }
+
+    public void sendCredentialRequestV2JsonLd(String credExId) {
+        String body = JsonPath.parse("{ holder_did: '" + keyDid  + "' }").jsonString();
+        String response = client.requestPOST(randomStr(apiUrls) + "/issue-credential-2.0/records/" + credExId + "/send-request", jwtToken, body);
         log.info("response: " + response);
     }
 
@@ -409,6 +461,30 @@ public class GlobalService {
                 "  indy: " + presentation +
                 "}").jsonString();
 
+        response = client.requestPOST(randomStr(apiUrls) + "/present-proof-2.0/records/" + presExId + "/send-presentation", jwtToken, body);
+        log.info("response: " + response);
+    }
+
+    public void sendProofV2JsonLd(String presExId, String presRequest) {
+        String response = client.requestGET(randomStr(apiUrls) + "/present-proof-2.0/records/" + presExId + "/credentials", jwtToken);
+        log.info("Matching Credentials in my wallet: " + response);
+
+        String recordId = JsonPath.read(response, "$.[0].record_id");
+        log.info("Use first credential in demo - recordId: "+ recordId);
+
+        String body =  JsonPath.parse("{" +
+                "  dif: {}" +
+                "}").jsonString();
+
+        ArrayList<LinkedHashMap<String, Object>> requestPresentations = JsonPath.read(presRequest, "$.request_presentations~attach");
+        for (LinkedHashMap<String, Object> reqPres : requestPresentations) {
+            ArrayList<LinkedHashMap<String, Object>> inputDescriptors = JsonPath.read(reqPres, "$.data.json.presentation_definition.input_descriptors");
+            for (LinkedHashMap<String, Object> inputDesc : inputDescriptors) {
+                String inputId = JsonPath.read(inputDesc, "$.id");
+                log.info("Use recordId:" + recordId +" for inputId:" + inputId);
+                body = JsonPath.parse(body).put("$.dif", inputId, new String[]{ recordId }).jsonString();
+            }
+        }
         response = client.requestPOST(randomStr(apiUrls) + "/present-proof-2.0/records/" + presExId + "/send-presentation", jwtToken, body);
         log.info("response: " + response);
     }
