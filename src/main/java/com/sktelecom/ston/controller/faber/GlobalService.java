@@ -65,7 +65,7 @@ public class GlobalService {
     }
 
     public String createInvitationUrl() {
-        String params = "?public=false";
+        String params = "?public=true";
         String response = client.requestPOST(randomStr(apiUrls) + "/connections/create-invitation" + params, jwtToken, "{}");
         log.info("response: " + response);
         String invitationUrl = JsonPath.read(response, "$.invitation_url");
@@ -225,9 +225,6 @@ public class GlobalService {
             createWalletAndDid();
             log.info("Register did as issuer");
             registerDidAsIssuer();
-
-            log.info("Create key method did");
-            createKeyDid();
         }
         else {
             updateEndpoint();
@@ -236,6 +233,9 @@ public class GlobalService {
         log.info("Create schema and credential definition");
         createSchema();
         createCredentialDefinition();
+
+        log.info("Create key method did");
+        createKeyDid();
 
         log.info("Configuration of faber:");
         if (useMultitenancy) {
@@ -385,7 +385,7 @@ public class GlobalService {
         log.info("Create a new schema on the ledger:" + prettyJson(body));
         String response = client.requestPOST(randomStr(apiUrls) + "/schemas", jwtToken, body);
         log.info("response:" + response);
-        schemaId = JsonPath.read(response, "$.sent.schema_id");
+        schemaId = JsonPath.read(response, "$.schema_id");
     }
 
     public void createCredentialDefinition() {
@@ -398,7 +398,7 @@ public class GlobalService {
         log.info("Create a new credential definition on the ledger:" + prettyJson(body));
         String response = client.requestPOST(randomStr(apiUrls) + "/credential-definitions", jwtToken, body);
         log.info("response:" + response);
-        credDefId = JsonPath.read(response, "$.sent.credential_definition_id");
+        credDefId = JsonPath.read(response, "$.credential_definition_id");
     }
 
     public void sendCredProblemReport(String credExId, String description) {
