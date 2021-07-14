@@ -222,9 +222,9 @@ public class GlobalService {
             stewardJwtToken = obtainStewardJwtToken();
 
             log.info("Create wallet and did");
-            createWalletAndDid();
+            createWallet();
             log.info("Register did as issuer");
-            registerDidAsIssuer();
+            createPublicDid();
         }
         else {
             updateEndpoint();
@@ -256,7 +256,7 @@ public class GlobalService {
         log.info("Run alice now.");
     }
 
-    public void createWalletAndDid() {
+    public void createWallet() {
         String body = JsonPath.parse("{" +
                 "  wallet_name: '" + walletName + "'," +
                 "  wallet_key: '" + walletName + ".key'," +
@@ -270,14 +270,6 @@ public class GlobalService {
         log.info("response:" + response);
         walletId = JsonPath.read(response, "$.settings.['wallet.id']");
         jwtToken = JsonPath.read(response, "$.token");
-
-        body = JsonPath.parse("{ seed: '" + seed + "'}").jsonString();
-        log.info("Create a new local did:" + prettyJson(body));
-        response = client.requestPOST(randomStr(apiUrls) + "/wallet/did/create", jwtToken, body);
-        log.info("response:" + response);
-        did = JsonPath.read(response, "$.result.did");
-        verkey = JsonPath.read(response, "$.result.verkey");
-        log.info("created did: " + did + ", verkey: " + verkey);
     }
 
     public String obtainStewardJwtToken() {
@@ -327,18 +319,33 @@ public class GlobalService {
         }
     }
 
-    public void registerDidAsIssuer() {
+    public void createPublicDid() {
+        String body = JsonPath.parse("{ seed: '" + seed + "'}").jsonString();
+        log.info("Create a new local did:" + prettyJson(body));
+        String response = client.requestPOST(randomStr(apiUrls) + "/wallet/did/create", jwtToken, body);
+        log.info("response:" + response);
+        did = JsonPath.read(response, "$.result.did");
+        verkey = JsonPath.read(response, "$.result.verkey");
+        log.info("created did: " + did + ", verkey: " + verkey);
+
         String params = "?did=" + did +
                 "&verkey=" + verkey +
-                "&alias=" + walletName +
                 "&role=ENDORSER";
-        log.info("Register the did to the ledger as a ENDORSER");
-        String response = client.requestPOST(randomStr(apiUrls) + "/ledger/register-nym" + params, stewardJwtToken, "{}");
+        log.info("Register the did to the ledger as a ENDORSER by steward");
+        response = client.requestPOST(randomStr(apiUrls) + "/ledger/register-nym" + params, stewardJwtToken, "{}");
         log.info("response: " + response);
 
         params = "?did=" + did;
         log.info("Assign the did to public: " + did);
         response = client.requestPOST(randomStr(apiUrls) + "/wallet/did/public" + params, jwtToken, "{}");
+        log.info("response: " + response);
+
+        params = "?did=" + did +
+                "&verkey=" + verkey +
+                "&alias=" + walletName +
+                "&role=ENDORSER";
+        log.info("Update the did itself"); // Do not remove this, it adds 'posted' metadata to the did
+        response = client.requestPOST(randomStr(apiUrls) + "/ledger/register-nym" + params, jwtToken, "{}");
         log.info("response: " + response);
     }
 
