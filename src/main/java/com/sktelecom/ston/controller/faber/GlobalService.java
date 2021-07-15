@@ -339,14 +339,6 @@ public class GlobalService {
         log.info("Assign the did to public: " + did);
         response = client.requestPOST(randomStr(apiUrls) + "/wallet/did/public" + params, jwtToken, "{}");
         log.info("response: " + response);
-
-        params = "?did=" + did +
-                "&verkey=" + verkey +
-                "&alias=" + walletName +
-                "&role=ENDORSER";
-        log.info("Update the did itself"); // Do not remove this, it adds 'posted' metadata to the did
-        response = client.requestPOST(randomStr(apiUrls) + "/ledger/register-nym" + params, jwtToken, "{}");
-        log.info("response: " + response);
     }
 
     public void createKeyDid() {
