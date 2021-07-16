@@ -20,7 +20,7 @@ services:
                  "--outbound-transport", "http",
                  "--label", "base.agent",
                  "--wallet-local-did",
-                 "--wallet-type", "indy",
+                 "--wallet-type", "askar",
                  "--wallet-name", "base",
                  "--wallet-key", "base.key",
                  "--auto-accept-invites",
