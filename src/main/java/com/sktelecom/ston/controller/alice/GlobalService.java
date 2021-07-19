@@ -25,7 +25,7 @@ import static com.sktelecom.ston.controller.utils.Common.*;
 public class GlobalService {
     private final HttpClient client = new HttpClient();
 
-    int iterations = 1; // for long-term test
+    int iterations = 20; // for long-term test
 
     @Value("${apiUrlList}")
     private String apiUrlList;
