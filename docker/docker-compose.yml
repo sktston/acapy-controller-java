@@ -3,7 +3,7 @@ version: '3'
 services:
   acapy-agent:
     build:
-      context: https://github.com/sktston/aries-cloudagent-python.git#develop
+      context: https://github.com/sktston/aries-cloudagent-python.git#bench
       dockerfile: ./docker/Dockerfile.run-wait
     ports:
       - 8020-8021:8020-8021
