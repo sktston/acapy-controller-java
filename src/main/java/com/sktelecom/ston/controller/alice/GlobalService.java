@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.sktelecom.ston.controller.utils.Common.*;
 
@@ -25,7 +26,7 @@ import static com.sktelecom.ston.controller.utils.Common.*;
 public class GlobalService {
     private final HttpClient client = new HttpClient();
 
-    int iterations = 20; // for long-term test
+    int iterations = 1; // for long-term test
 
     @Value("${apiUrlList}")
     private String apiUrlList;
@@ -56,9 +57,20 @@ public class GlobalService {
     long beforeTime;
     long afterTime;
 
+    // time calc
+    int testTime = 120; // seconds
+    long startTime;
+    long endTime;
+    long proposalTime;
+    long ackTime;
+    AtomicInteger counter = new AtomicInteger();
+    double totalLatency = 0L;
+
     // check options
     static boolean useJsonLd = Boolean.parseBoolean(System.getenv().getOrDefault("USE_JSON_LD", "false"));
     static boolean useMultitenancy = Boolean.parseBoolean(System.getenv().getOrDefault("USE_MULTITENANCY", "true"));
+    static boolean bencmharkIssue = Boolean.parseBoolean(System.getenv().getOrDefault("BENCHMARK_ISSUE", "false"));
+    static boolean bencmharkVerify = Boolean.parseBoolean(System.getenv().getOrDefault("BENCHMARK_VERIFY", "false"));
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAfterStartup() {
@@ -88,6 +100,11 @@ public class GlobalService {
         switch(topic) {
             case "connections":
                 if (state.equals("active")) {
+                    if (bencmharkIssue) {
+                        startTime = System.currentTimeMillis();
+                        counter.set(0);
+                        proposalTime = System.currentTimeMillis();
+                    }
                     if (protocolVersion.equals("2.0")) {
                         log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendCredentialProposalV2");
                         String connectionId = JsonPath.read(body, "$.connection_id");
@@ -115,6 +132,21 @@ public class GlobalService {
                     sendCredentialRequest(credExId);
                 }
                 else if (state.equals("credential_acked")) {
+                    if (bencmharkIssue) {
+                        counter.incrementAndGet();
+                        ackTime = System.currentTimeMillis();
+                        long latency = ackTime - proposalTime;
+                        totalLatency = totalLatency + latency;
+
+                        long elapsed = ackTime - startTime;
+                        if (elapsed >= testTime * 1000L) {
+                            delayedExit();
+                        }
+                        log.info("- elapsed time:" + elapsed/1000 + " is less than test time:" + testTime + "  -> sendCredentialProposal");
+                        proposalTime = System.currentTimeMillis();
+                        sendCredentialProposal(JsonPath.read(body, "$.connection_id"));
+                        return;
+                    }
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPresentationProposal");
                     String connectionId = JsonPath.read(body, "$.connection_id");
                     sendPresentationProposal(connectionId);
@@ -522,6 +554,23 @@ public class GlobalService {
     public void delayedExit() {
         TimerTask task = new TimerTask() {
             public void run() {
+                if (bencmharkIssue) {
+                    log.info("Alice demo completes - Exit");
+                    endTime = System.currentTimeMillis();
+                    long elapsed = endTime - startTime;
+                    long transNum = counter.get();
+                    double elapsedSec = (double) elapsed / 1000L;
+                    double totalLatencySec = totalLatency/1000L;
+
+                    log.info("--------------------------");
+                    log.info("Number of transactions : " + transNum);
+                    log.info("Elapsed time (sec): " + elapsedSec);
+                    log.info("TPS: " + transNum/elapsedSec);
+                    log.info("--------------------------");
+                    log.info("Total latency (sec): " + totalLatencySec);
+                    log.info("Average latency (sec): " + totalLatencySec/transNum);
+                    System.exit(0);
+                }
                 if (--iterations == 0) {
                     log.info("Alice demo completes - Exit");
                     afterTime = System.currentTimeMillis();
