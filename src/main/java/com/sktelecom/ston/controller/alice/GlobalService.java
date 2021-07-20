@@ -140,12 +140,17 @@ public class GlobalService {
 
                         long elapsed = ackTime - startTime;
                         if (elapsed >= testTime * 1000L) {
-                            delayedExit();
+                            deleteWalletAndExit();
                         }
                         log.info("- elapsed time:" + elapsed/1000 + " is less than test time:" + testTime + "  -> sendCredentialProposal");
                         proposalTime = System.currentTimeMillis();
                         sendCredentialProposal(JsonPath.read(body, "$.connection_id"));
                         return;
+                    }
+                    if (bencmharkVerify) {
+                        startTime = System.currentTimeMillis();
+                        counter.set(0);
+                        proposalTime = System.currentTimeMillis();
                     }
                     log.info("- Case (topic:" + topic + ", state:" + state + ") -> sendPresentationProposal");
                     String connectionId = JsonPath.read(body, "$.connection_id");
@@ -194,6 +199,22 @@ public class GlobalService {
                     sendProof(presExId, presentationRequest);
                 }
                 else if (state.equals("presentation_acked")) {
+                    if (bencmharkVerify) {
+                        counter.incrementAndGet();
+                        ackTime = System.currentTimeMillis();
+                        long latency = ackTime - proposalTime;
+                        totalLatency = totalLatency + latency;
+
+                        long elapsed = ackTime - startTime;
+                        if (elapsed >= testTime * 1000L) {
+                            deleteWalletAndExit();
+                        }
+                        log.info("- elapsed time:" + elapsed/1000 + " is less than test time:" + testTime + "  -> sendPresentationProposal");
+                        proposalTime = System.currentTimeMillis();
+                        String connectionId = JsonPath.read(body, "$.connection_id");
+                        sendPresentationProposal(connectionId);
+                        return;
+                    }
                     if (useMultitenancy) {
                         log.info("- Case (topic:" + topic + ", state:" + state + ") -> deleteWalletAndExit");
                         deleteWalletAndExit();
@@ -531,30 +552,7 @@ public class GlobalService {
         TimerTask task = new TimerTask() {
             public void run() {
                 deleteWallet();
-                if (--iterations == 0) {
-                    log.info("Alice demo completes - Exit");
-                    afterTime = System.currentTimeMillis();
-                    long secDiffTime = afterTime - beforeTime;
-                    log.info("Elapsed time (ms) : " + secDiffTime);
-                    System.exit(0);
-                }
-                else {
-                    log.info("Remaining iterations : " + iterations);
-                    provisionController();
-
-                    log.info("Receive invitation from faber controller");
-                    receiveInvitation();
-                }
-            }
-        };
-        Timer timer = new Timer("Timer");
-        timer.schedule(task, 100L);
-    }
-
-    public void delayedExit() {
-        TimerTask task = new TimerTask() {
-            public void run() {
-                if (bencmharkIssue) {
+                if (bencmharkIssue || bencmharkVerify) {
                     log.info("Alice demo completes - Exit");
                     endTime = System.currentTimeMillis();
                     long elapsed = endTime - startTime;
@@ -580,12 +578,35 @@ public class GlobalService {
                 }
                 else {
                     log.info("Remaining iterations : " + iterations);
+                    provisionController();
+
                     log.info("Receive invitation from faber controller");
                     receiveInvitation();
                 }
             }
         };
         Timer timer = new Timer("Timer");
-        timer.schedule(task, 100L);
+        timer.schedule(task, 1000L);
+    }
+
+    public void delayedExit() {
+        TimerTask task = new TimerTask() {
+            public void run() {
+                if (--iterations == 0) {
+                    log.info("Alice demo completes - Exit");
+                    afterTime = System.currentTimeMillis();
+                    long secDiffTime = afterTime - beforeTime;
+                    log.info("Elapsed time (ms) : " + secDiffTime);
+                    System.exit(0);
+                }
+                else {
+                    log.info("Remaining iterations : " + iterations);
+                    log.info("Receive invitation from faber controller");
+                    receiveInvitation();
+                }
+            }
+        };
+        Timer timer = new Timer("Timer");
+        timer.schedule(task, 1000L);
     }
 }
