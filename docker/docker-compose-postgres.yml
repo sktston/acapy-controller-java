@@ -23,7 +23,7 @@ services:
                  "--label", "base.agent",
                  "--public-invites",
                  "--wallet-local-did",
-                 "--wallet-type", "askar",
+                 "--wallet-type", "indy",
                  "--wallet-name", "base",
                  "--wallet-key", "base.key",
                  "--wallet-storage-type", "postgres_storage",
