@@ -590,17 +590,12 @@ public class GlobalService {
     }
 
     public String getPresFormat(String presProposal) {
-        String encodedData = JsonPath.read(presProposal, "$.proposals~attach.[0].data.base64");
-        String proposal = new String(Base64.decodeBase64(encodedData));
         try {
-            // TODO: need to use dif format directly
-            String name = JsonPath.read(proposal, "$.name");
-            if (name.equals("dif"))
-                return name;
-            else
-                return "indy";
+            String format = JsonPath.read(presProposal, "$.formats.[0].attach_id");
+            return format;
         } catch (PathNotFoundException e) {
-            return "indy";
+            log.error("format is not found");
+            return "";
         }
     }
 

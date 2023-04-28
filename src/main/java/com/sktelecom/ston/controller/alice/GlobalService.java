@@ -306,7 +306,7 @@ public class GlobalService {
                 "  connection_id: '" + connectionId  + "'," +
                 "  filter: {" +
                 "    ld_proof: {" +
-                "      credential: { @context:[https://www.w3.org/2018/credentials/v1], credentialSubject:{}, issuanceDate:'2020-01-01T12:00:00Z', issuer:{}, type:[VerifiableCredential] }," +
+                "      credential: { @context:[https://www.w3.org/2018/credentials/v1], credentialSubject:{}, issuanceDate:'2020-01-01T12:00:00Z', issuer:{}, type:[VerifiableCredential, PermanentResident] }," +
                 "      options: { proofType:'' }," +
                 "    }" +
                 "  }" +
@@ -331,7 +331,7 @@ public class GlobalService {
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId  + "'," +
                 "  presentation_proposal: {" +
-                "    indy: {}" +
+                "    indy: { requested_attributes: {}, requested_predicates: {} }" +
                 "  }" +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/present-proof-2.0/send-proposal", jwtToken, body);
@@ -342,7 +342,7 @@ public class GlobalService {
         String body = JsonPath.parse("{" +
                 "  connection_id: '" + connectionId  + "'," +
                 "  presentation_proposal: {" +
-                "    indy: { name:'dif' }" +
+                "    dif: { input_descriptors: [] }" +
                 "  }" +
                 "}").jsonString();
         String response = client.requestPOST(randomStr(apiUrls) + "/present-proof-2.0/send-proposal", jwtToken, body);
